@@ -7,8 +7,7 @@ import { CHARACTERS, CHAR_COUNT } from './characters.js';
 import { SCENES, THEMES } from './scenes.js';
 
 /* ---------- low-res pixel canvas ---------- */
-const view = document.getElementById('game');
-const ctx = view.getContext('2d');
+let view, ctx;
 let VW=0, VH=0, DPR=1;           // device pixel size
 let PXS=4;                        // pixels-per-art-pixel (scale); set on resize
 function resize(){
@@ -22,10 +21,8 @@ function resize(){
   PXS = Math.max(4, Math.round(Math.min(VW,VH)/115));
   invalidateTrackMetrics();
 }
-window.addEventListener('resize',resize); resize();
 
 let tabHidden=false;
-document.addEventListener('visibilitychange',function(){ tabHidden=document.hidden; });
 
 let lengthIdx=1, themeIdx=0, sceneIdx=0, powerUpsOn=true;
 let START_X=LENGTHS[lengthIdx].start, FINISH_X=LENGTHS[lengthIdx].finish;
@@ -195,7 +192,7 @@ function sfxGo(){tone(660,0,0.1,'square',0.1);tone(990,0.08,0.4,'square',0.1);}
 function sfxCross(i){tone(560+i*70,0,0.14,'square',0.1);}
 function sfxPow(){tone(880,0,0.06,'square',0.08);tone(1240,0.05,0.1,'square',0.08);}
 function sfxFanfare(){[523,659,784,1047].forEach(function(f,i){tone(f,i*0.12,0.26,'square',0.11);});}
-const muteCanvas=document.getElementById('muteCanvas'); const mcx=muteCanvas.getContext('2d');
+let muteCanvas, mcx;
 function drawMuteIcon(){
   const cell=2; mcx.imageSmoothingEnabled=false; mcx.clearRect(0,0,muteCanvas.width,muteCanvas.height);
   function r(x,y,w,h,c){ mcx.fillStyle=c; mcx.fillRect(x*cell,y*cell,w*cell,h*cell); }
@@ -215,12 +212,6 @@ function drawMuteIcon(){
     r(9,2,1,1,x); r(7,4,1,1,x); r(9,6,1,1,x);
   }
 }
-drawMuteIcon();
-document.getElementById('muteBtn').addEventListener('click',function(){
-  muted=!muted;
-  drawMuteIcon();
-  document.getElementById('muteBtn').setAttribute('aria-pressed', muted ? 'true' : 'false');
-});
 
 /* ---------- racer factory ---------- */
 function displayName(p,i){return (p.name||'').trim()||FUN_NAMES[i%FUN_NAMES.length];}
@@ -409,12 +400,7 @@ function viewUnits(){
 /* ============================================================
    COUNTDOWN / RACE FLOW
    ============================================================ */
-const lobbyEl=document.getElementById('lobby'), listEl=document.getElementById('playerList');
-const addBtn=document.getElementById('addBtn'), startBtn=document.getElementById('startBtn');
-const hudEl=document.getElementById('hud'), hudRows=document.getElementById('hudRows');
-const countWrap=document.getElementById('countWrap'), countNum=document.getElementById('countNum');
-const resultsEl=document.getElementById('results'), eventToast=document.getElementById('eventToast');
-const finishFlash=document.getElementById('finishFlash'), photoTag=document.getElementById('photoTag');
+let lobbyEl, listEl, addBtn, startBtn, hudEl, hudRows, countWrap, countNum, resultsEl, eventToast, finishFlash, photoTag;
 
 function startRace(){ resultsShown=false; setSlowmo(false); buildRacers(); spawnPowerups();
   lobbyEl.classList.add('hidden'); resultsEl.classList.add('hidden'); hudEl.classList.remove('hidden'); renderHUD();
@@ -438,9 +424,6 @@ function showResults(){ const total=racers.length, w=finishOrder[0];
   const slow=finishOrder.filter(function(r){return r.neverLedFlag;}), noteEl=document.getElementById('resNote');
   noteEl.innerHTML=slow.length?('<b>Slowpoke clause:</b> '+slow.map(function(r){return escapeHtml(displayName(r.p,r.i));}).join(', ')+' never led — +1 sip of shame.'):'Everyone led at some point — a civilised race. No shame sips today.';
   setTimeout(function(){ resultsShown=true; resultsEl.classList.remove('hidden'); },800); }
-
-document.getElementById('againBtn').addEventListener('click',function(){ resultsEl.classList.add('hidden'); startRace(); });
-document.getElementById('editBtn').addEventListener('click',function(){ resultsEl.classList.add('hidden'); state='lobby'; hudEl.classList.add('hidden'); buildRacers(); renderLobby(); lobbyEl.classList.remove('hidden'); });
 
 /* ---------- HUD ---------- */
 function renderHUD(){ const sorted=racers.slice().sort(function(a,b){ if(a.finished&&b.finished)return a.place-b.place; if(a.finished)return -1; if(b.finished)return 1; return b.x-a.x; });
@@ -496,18 +479,54 @@ function renderLobby(){ listEl.innerHTML='';
   addBtn.textContent=players.length>=MAX_PLAYERS?'ROSTER FULL (8)':('+ ADD PLAYER  ·  '+players.length+'/'+MAX_PLAYERS);
   addBtn.disabled=players.length>=MAX_PLAYERS; addBtn.style.opacity=addBtn.disabled?0.5:1;
 }
-addBtn.addEventListener('click',function(){ if(players.length>=MAX_PLAYERS)return;
-  players.push({name:'',colorIdx:freeColor(),charIdx:players.length%CHAR_COUNT}); renderLobby();
-  const inputs=listEl.querySelectorAll('input'); if(inputs.length)inputs[inputs.length-1].focus(); });
 
 function wireSeg(id,getIdx,setIdx){ const seg=document.getElementById(id);
   function paint(){ Array.prototype.forEach.call(seg.children,function(b){ b.classList.toggle('active',+b.dataset.i===getIdx()); }); }
-  seg.addEventListener('click',function(e){ const b=e.target.closest('button'); if(!b)return; setIdx(+b.dataset.i); paint(); }); paint(); return paint; }
-wireSeg('sceneSeg',function(){return sceneIdx;},function(i){sceneIdx=i; starField=null;});
-wireSeg('themeSeg',function(){return themeIdx;},function(i){themeIdx=i; starField=null;});
-wireSeg('lengthSeg',function(){return lengthIdx;},function(i){lengthIdx=i; START_X=LENGTHS[i].start; FINISH_X=LENGTHS[i].finish;});
-document.getElementById('powerToggle').addEventListener('change',function(e){ powerUpsOn=e.target.checked; });
-startBtn.addEventListener('click',function(){ if(state!=='lobby')return; ac(); players.forEach(function(p,i){ p.name=displayName(p,i); }); startRace(); });
+  seg.addEventListener('click',function(e){ const b=e.target.closest('button'); if(!b)return; setIdx(+b.dataset.i); paint(); }); paint(); return paint;
+}
+
+function bindUi(){
+  view=document.getElementById('game');
+  ctx=view.getContext('2d');
+  window.addEventListener('resize',resize);
+  document.addEventListener('visibilitychange',function(){ tabHidden=document.hidden; });
+  resize();
+
+  muteCanvas=document.getElementById('muteCanvas');
+  mcx=muteCanvas.getContext('2d');
+  drawMuteIcon();
+  document.getElementById('muteBtn').addEventListener('click',function(){
+    muted=!muted;
+    drawMuteIcon();
+    document.getElementById('muteBtn').setAttribute('aria-pressed', muted ? 'true' : 'false');
+  });
+
+  lobbyEl=document.getElementById('lobby');
+  listEl=document.getElementById('playerList');
+  addBtn=document.getElementById('addBtn');
+  startBtn=document.getElementById('startBtn');
+  hudEl=document.getElementById('hud');
+  hudRows=document.getElementById('hudRows');
+  countWrap=document.getElementById('countWrap');
+  countNum=document.getElementById('countNum');
+  resultsEl=document.getElementById('results');
+  eventToast=document.getElementById('eventToast');
+  finishFlash=document.getElementById('finishFlash');
+  photoTag=document.getElementById('photoTag');
+
+  document.getElementById('againBtn').addEventListener('click',function(){ resultsEl.classList.add('hidden'); startRace(); });
+  document.getElementById('editBtn').addEventListener('click',function(){ resultsEl.classList.add('hidden'); state='lobby'; hudEl.classList.add('hidden'); buildRacers(); renderLobby(); lobbyEl.classList.remove('hidden'); });
+
+  addBtn.addEventListener('click',function(){ if(players.length>=MAX_PLAYERS)return;
+    players.push({name:'',colorIdx:freeColor(),charIdx:players.length%CHAR_COUNT}); renderLobby();
+    const inputs=listEl.querySelectorAll('input'); if(inputs.length)inputs[inputs.length-1].focus(); });
+
+  wireSeg('sceneSeg',function(){return sceneIdx;},function(i){sceneIdx=i; starField=null;});
+  wireSeg('themeSeg',function(){return themeIdx;},function(i){themeIdx=i; starField=null;});
+  wireSeg('lengthSeg',function(){return lengthIdx;},function(i){lengthIdx=i; START_X=LENGTHS[i].start; FINISH_X=LENGTHS[i].finish;});
+  document.getElementById('powerToggle').addEventListener('change',function(e){ powerUpsOn=e.target.checked; });
+  startBtn.addEventListener('click',function(){ if(state!=='lobby')return; ac(); players.forEach(function(p,i){ p.name=displayName(p,i); }); startRace(); });
+}
 
 /* ============================================================
    MAIN LOOP
@@ -547,6 +566,7 @@ function frame(now){
 }
 
 export function bootGame() {
+  bindUi();
   renderLobby();
   buildRacers();
   requestAnimationFrame(frame);

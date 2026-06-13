@@ -2,7 +2,7 @@
 
 **Derby Royale** is a browser drinking game built around a side-scrolling pixel-art race: pick your racers, cheer them to the finish line, and let the standings decide who sips.
 
-Everything runs in a **single HTML file** — no build step, no backend, no install. Open it on a phone or laptop, add up to eight players, and start the race.
+Everything runs in the **browser** — no backend, no accounts. Clone the repo and run **`pnpm dev`**, or play the live build on a phone or laptop. Add up to eight players and start the race.
 
 **Play now:** [derby-royale.vercel.app](https://derby-royale.vercel.app/)
 
