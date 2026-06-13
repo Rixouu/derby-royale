@@ -8,7 +8,7 @@ The game was built by [Jonathan Rycx](https://github.com/Rixouu), who leads prod
 
 [![HTML5 Canvas](https://img.shields.io/badge/Canvas-2D-ff8a2b?style=flat)](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API)
 [![Vanilla JS](https://img.shields.io/badge/JavaScript-ES6+-f7df1e?style=flat&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
-[![Zero deps](https://img.shields.io/badge/Dependencies-none-2ee6c0?style=flat)](#-quick-start)
+[![Vercel](https://img.shields.io/badge/Deploy-Vercel-000?style=flat&logo=vercel)](docs/deployment.md)
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ## ✨ Key Features
@@ -49,6 +49,8 @@ Built for groups — the results screen calculates sips automatically:
 
 Drink responsibly — water counts too. **18+**
 
+Full rules and house variants: **[docs/game-rules.md](docs/game-rules.md)**
+
 ### 🔊 Audio & UX
 
 - Procedural **Web Audio** SFX (boosts, spins, finish fanfare).
@@ -57,58 +59,47 @@ Drink responsibly — water counts too. **18+**
 
 ## 🛠 Tech Stack
 
-- **Single-file app**: `derby-royale.html` (HTML + CSS + vanilla JavaScript).
+- **Single-file app**: `index.html` (HTML + CSS + vanilla JavaScript).
 - **Canvas 2D** rendering with a low-res pixel scale (`image-rendering: pixelated`).
 - **Web Audio API** for sound — no external libraries.
 - **Google Fonts** for pixel typography (loaded from CDN when online).
+- **Vercel** static hosting — see **[docs/deployment.md](docs/deployment.md)**.
 
 No bundler, framework, or package manager required.
 
 ## 🚀 Quick Start
 
-### Prerequisites
-
-- Any modern browser (Chrome, Safari, Firefox, Edge).
-- Optional: a local static file server if your browser blocks file:// audio or fonts (see below).
-
 ### Play locally
 
-**Option A — open the file**
-
 ```bash
-open derby-royale.html          # macOS
-xdg-open derby-royale.html      # Linux
-start derby-royale.html         # Windows
-```
-
-Or double-click `derby-royale.html` / `index.html` in Finder.
-
-**Option B — local server (recommended for mobile testing on the same Wi‑Fi)**
-
-```bash
-# Python 3
+# Recommended — local static server
 python3 -m http.server 8080
-
-# Node (npx, no install)
-npx --yes serve .
-
-# Then open http://localhost:8080
+# open http://localhost:8080
 ```
 
-On your phone, use your machine’s LAN IP (e.g. `http://192.168.1.10:8080`).
+Or open `index.html` directly (some browsers restrict audio on `file://`).
 
-### GitHub Pages
+### Deploy on Vercel
 
-This repo includes `index.html`, which redirects to `derby-royale.html`. Enable **GitHub Pages** from the `main` branch root to host the game at:
+1. Import [github.com/Rixouu/derby-royale](https://github.com/Rixouu/derby-royale) in Vercel.
+2. Framework preset: **Other** — leave build/output commands empty.
+3. Deploy — the game is served at `/`.
 
-`https://rixouu.github.io/derby-royale/`
+Optional share URL: **`/play`** (rewrite to `/`). Details in **[docs/deployment.md](docs/deployment.md)**.
 
 ## 📁 Project Structure
 
 ```txt
 derby-royale/
-├── derby-royale.html   # Full game (HTML + CSS + JS)
-├── index.html          # Redirect entry point for static hosting
+├── index.html           # Full game (production entry point)
+├── derby-royale.html    # Legacy redirect → /
+├── og-image.png         # Social / Open Graph preview
+├── vercel.json          # Headers, cache, /play rewrite
+├── docs/
+│   ├── README.md        # Documentation index
+│   ├── deployment.md    # Vercel & domains
+│   ├── game-rules.md    # Drinking rules & variants
+│   └── extending.md     # Add characters & scenes
 ├── README.md
 └── LICENSE
 ```
@@ -121,28 +112,28 @@ derby-royale/
 4. Tap **START THE RACE** — countdown, then watch the HUD.
 5. **Results** show placement, sip counts, and optional party prompts — race again or edit settings.
 
-Expand **How to play & power-ups** in the lobby for the full rule card.
+Expand **How to play & power-ups** in the lobby for the in-game rule card.
 
 ## 🌟 Implementation Notes
 
-- **Extending characters**: add an entry to the `CHARACTERS` array with a `draw(g, frame, tint)` function (see comments at the top of the script block).
-- **Extending scenes**: add an entry to `SCENES` with sky colours, track palette, and a `prop` key for background decoration.
-- **Sprite cache**: characters are pre-rendered to offscreen canvases per colour/frame for performance.
+- **Extending characters / scenes**: see **[docs/extending.md](docs/extending.md)**.
+- **Sprite cache**: characters are pre-rendered to offscreen canvases per colour/frame.
 - **Lane model**: each player gets a dedicated lane; the camera tracks the race leader.
 
 ## 🔐 Privacy & Security
 
 - **No accounts**, analytics, or network calls during gameplay (except optional Google Fonts CDN).
 - **No data persistence** — refresh the page to reset the lobby.
-- Safe to host as static files; nothing server-side to configure.
+- Security headers configured in `vercel.json`.
 
 ## 🤝 Contributing
 
 Contributions are welcome.
 
-1. Keep the game in a **single HTML file** unless there is a strong reason to split assets.
+1. Keep the game in **`index.html`** unless there is a strong reason to split assets.
 2. Preserve the pixel-art aesthetic and mobile-first layout.
 3. Test on both desktop and a phone-sized viewport before opening a PR.
+4. Update **docs** when you change rules or extension APIs.
 
 ## 📄 License
 
