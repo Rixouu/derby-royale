@@ -1,16 +1,83 @@
-const SCENES=[
-  {key:'beach', name:'Beach',  sky:['#7fd5f0','#bdeaf6'], ground:'#f2d49b', groundDark:'#e4c184', track:'#ead9b0', laneLine:'#cdb98a', finishWord:'the finish', prop:'palm'},
-  {key:'meadow',name:'Meadow', sky:['#8fd0f5','#cdeeff'], ground:'#7cbf5a', groundDark:'#5fa247', track:'#9ad07f', laneLine:'#79b35f', finishWord:'the finish', prop:'pine'},
-  {key:'snow',  name:'Snow',   sky:['#bfe0f2','#e7f3fb'], ground:'#eef4fb', groundDark:'#d4e2f0', track:'#f6fbff', laneLine:'#cfe0ef', finishWord:'the finish', prop:'pinesnow'},
-  {key:'desert',name:'Desert', sky:['#ffd089','#ffe9c2'], ground:'#e8c98f', groundDark:'#d0a85f', track:'#ecd6a8', laneLine:'#cdb178', finishWord:'the finish', prop:'cactus'},
-  {key:'volcano',name:'Volcano',sky:['#3a2740','#6b3a4a'],ground:'#3a3338', groundDark:'#2a2428', track:'#4a4048', laneLine:'#2e262e', finishWord:'the finish', prop:'lavarock'},
+const SCENES = [
+  {
+    key: 'beach',
+    name: 'Beach',
+    sky: ['#7fd5f0', '#bdeaf6'],
+    layers: [
+      { src: '/background/beach/01-coast.png', parallax: 0.12 },
+    ],
+    ground: '#f2d49b',
+    groundDark: '#e4c184',
+    track: '#ead9b0',
+    laneLine: '#cdb98a',
+  },
+  {
+    key: 'meadow',
+    name: 'Meadow',
+    sky: ['#8fd0f5', '#cdeeff'],
+    layers: [
+      { src: '/background/meadow/01-sky.png' },
+      { src: '/background/meadow/02-hills.png' },
+      { src: '/background/meadow/03-far-trees.png' },
+      { src: '/background/meadow/04-mid-trees.png' },
+      { src: '/background/meadow/05-near-trees.png' },
+      { src: '/background/meadow/06-grass.png' },
+      { src: '/background/meadow/07-front.png', front: true },
+      { src: '/background/meadow/08-front-detail.png', front: true },
+    ],
+    ground: '#7cbf5a',
+    groundDark: '#5fa247',
+    track: '#9ad07f',
+    laneLine: '#79b35f',
+  },
+  {
+    key: 'snow',
+    name: 'Snow',
+    sky: ['#bfe0f2', '#e7f3fb'],
+    layers: [
+      { src: '/background/snow/01-sky.png' },
+      { src: '/background/snow/02-mountains.png' },
+      { src: '/background/snow/03-mid.png' },
+      { src: '/background/snow/04-front.png', front: true },
+    ],
+    ground: '#eef4fb',
+    groundDark: '#d4e2f0',
+    track: '#f6fbff',
+    laneLine: '#cfe0ef',
+  },
+  {
+    key: 'desert',
+    name: 'Desert',
+    sky: ['#ffd089', '#ffe9c2'],
+    layers: [
+      { src: '/background/desert/01-sky.png' },
+      { src: '/background/desert/02-rocks.png' },
+    ],
+    ground: '#e8c98f',
+    groundDark: '#d0a85f',
+    track: '#ecd6a8',
+    laneLine: '#cdb178',
+  },
+  {
+    key: 'volcano',
+    name: 'Volcano',
+    sky: ['#3a2740', '#6b3a4a'],
+    layers: [
+      { src: '/background/volcano/01-sky.png' },
+      { src: '/background/volcano/02-aurora.png' },
+      { src: '/background/volcano/03-mountains.png' },
+    ],
+    ground: '#3a3338',
+    groundDark: '#2a2428',
+    track: '#4a4048',
+    laneLine: '#2e262e',
+  },
 ];
 
-/* time-of-day tints overlaid on scene */
-const THEMES=[
-  {key:'day',    overlay:'rgba(255,240,200,0)',   sky:null, star:false},
-  {key:'sunset', overlay:'rgba(255,120,60,0.18)', sky:['#f2784b','#ffd089'], star:false},
-  {key:'night',  overlay:'rgba(20,20,60,0.42)',   sky:['#0a1838','#243a63'], star:true},
+const THEMES = [
+  { key: 'day', overlay: 'rgba(255,240,200,0)', star: false },
+  { key: 'sunset', overlay: 'rgba(255,120,60,0.18)', sky: ['#f2784b', '#ffd089'], star: false },
+  { key: 'night', overlay: 'rgba(20,20,60,0.42)', sky: ['#0a1838', '#243a63'], star: true },
 ];
 
 export { SCENES, THEMES };

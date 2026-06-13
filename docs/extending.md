@@ -8,72 +8,55 @@ Comments in `characters.js` and `scenes.js` mark the main extension points.
 
 | Symbol | Role |
 |--------|------|
-| `CHARACTERS` | Racer sprites — procedural pixel art |
+| `CHARACTERS` | Racer sprites — PNG run sheets (`public/sprites/`) |
 | `COLORS` | Player colour swatches |
-| `SCENES` | Backgrounds (sky, track, props) |
+| `SCENES` | Parallax background layers + lane colours |
 | `THEMES` | Time-of-day overlays (day / sunset / night) |
 | `POWERUP_TYPES` | Pickup behaviour keys |
 | `buildRacers()` | Creates sim state from lobby `players` |
 | `drawScene()` | Paints background + track |
 
-Sprite grid size: **`GW = 18`**, **`GH = 22`** art pixels. Characters face **right**. Run animation uses **4 frames** (`0–3`).
+All racers use **PNG sprite sheets**. See **[assets.md](./assets.md)** for how to add `run.png` files and register them in `CHARACTERS`.
 
 ## Adding a character
 
-1. Open **`src/game/characters.js`** and find the `CHARACTERS` array.
-2. Add an object:
+1. Add **`public/sprites/<key>/run.png`** (see [assets.md](./assets.md)).
+2. Add an entry to **`CHARACTERS`** in **`src/game/characters.js`**:
 
 ```javascript
-{
-  key: 'robot',
-  name: 'Robot',
-  kind: 'hero', // or 'critter'
-  draw: function (g, f, tint) {
-    // g(x, y, w, h, color) paints a rectangle in art-pixel coords
-    // f = frame 0..3, tint = player's chosen colour hex
-    bipedLegs(g, f);
-    var L = lean(f);
-    g(6 + L, 8, 6, 7, tint);
-    g(6 + L, 3, 6, 5, '#c9ced6');
-    g(8 + L, 5, 2, 2, '#2ee6c0'); // eye
-    bipedArms(g, f, tint);
-  },
-},
+{ key: 'wizard', name: 'Wizard', kind: 'hero', sheet: { src: '/sprites/wizard/run.png', ...SHEET_RUN } },
 ```
 
-3. Reuse helpers where possible:
-   - **`bipedLegs(g, f)`** / **`bipedArms(g, f, tint)`** — humanoid runners
-   - **`lean(f)`** — subtle forward lean on contact frames
-4. Keep drawing inside the `GW × GH` grid; origin is top-left.
-5. Refresh — the lobby character picker cycles all `CHARACTERS` entries automatically.
+3. Refresh — the lobby picker cycles all `CHARACTERS` entries automatically.
 
 ### Critter vs hero
 
-`kind` is for grouping/labels only; it does not change gameplay. Use `'critter'` for animals and `'hero'` for humanoid archetypes.
+`kind` is for grouping/labels only; it does not change gameplay.
 
 ## Adding a scene
 
-1. Find the `SCENES` array in **`src/game/scenes.js`**.
-2. Add an entry:
+Scenes use **PNG parallax layers** plus semi-transparent lane colours. See **[assets.md](./assets.md)** for layer sizes and folder layout.
+
+1. Add PNG layers under **`public/background/<key>/`** (numbered filenames, back → front).
+2. Add an entry to **`SCENES`** in **`src/game/scenes.js`**:
 
 ```javascript
 {
   key: 'city',
   name: 'City',
-  sky: ['#4a6fa5', '#8fb8e8'],
-  ground: '#5a5a5a',
-  groundDark: '#3a3a3a',
-  track: '#6a6a6a',
-  laneLine: '#4a4a4a',
-  finishWord: 'the finish',
-  prop: 'building', // must match a branch in drawProp()
+  layers: [
+    { src: '/background/city/01-sky.png' },
+    { src: '/background/city/02-skyline.png', parallax: 0.25 },
+  ],
+  track: 'rgba(120,120,130,0.5)',
+  groundDark: 'rgba(80,80,90,0.5)',
+  laneLine: 'rgba(100,100,110,0.7)',
 },
 ```
 
-3. Implement the prop in **`drawProp()`** inside **`src/game/engine.js`** (search for `palm`, `cactus`, etc.) using the same `R()` pixel helper.
-4. Add a lobby button in **`index.html`** `#sceneSeg` (copy an existing `<button data-i="…">`).
+3. Add a lobby button in **`index.html`** `#sceneSeg` (copy an existing `<button data-i="…">`).
 
-Scene index `data-i` must match the array index (0-based).
+Scene index `data-i` must match the array index (0-based). New layer paths load automatically on boot via **`loadBackgroundLayers()`**.
 
 ## Time of day
 
@@ -105,7 +88,7 @@ SFX uses the **Web Audio API** (`tone()`, `sfxPow()`, etc.). Hook new events the
 ## Testing checklist
 
 - [ ] New character renders in picker preview and in-race at multiple `PXS` scales
-- [ ] New scene props don’t clip the track or finish line
+- [ ] New scene layers don’t obscure the start/finish line
 - [ ] 2-player and 8-player lobbies both work
 - [ ] Power-up off/on paths still run
 - [ ] Mobile viewport (narrow width, short height)

@@ -18,9 +18,8 @@ The game was built by [Jonathan Rycx](https://github.com/Rixouu), who leads prod
 ### 🏎️ Pixel-art race
 
 - Side-on race, left → right, with **photo finish** and live standings HUD.
-- **Procedural sprites** — all characters, scenes, and effects are drawn on canvas; no image assets to load.
-- **10 racer archetypes**: Turtle, Duck, Frog, Penguin, Bunny, Ninja, Speedster, Runner, Knight, Wizard.
-- Each player gets a **custom colour** and **character picker** in the lobby.
+- **PNG sprite racers** — Fighter, Samurai, Shinobi, Naia, Ninja (horizontal run sheets in `public/sprites/`)
+- Each player gets a **custom colour** (UI swatch) and **character picker** in the lobby.
 
 ### 🌍 Scenes & atmosphere
 

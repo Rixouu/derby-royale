@@ -4,7 +4,9 @@ import {
 } from './config.js';
 import { rnd } from './color.js';
 import { CHARACTERS, CHAR_COUNT } from './characters.js';
+import { loadSpriteSheets, frameCountFor, idleFrameFor, spriteScreenSize } from './sprite-sheets.js';
 import { SCENES, THEMES } from './scenes.js';
+import { loadBackgroundLayers, defaultParallax } from './backgrounds.js';
 
 /* ---------- low-res pixel canvas ---------- */
 let view, ctx;
@@ -29,14 +31,24 @@ let START_X=LENGTHS[lengthIdx].start, FINISH_X=LENGTHS[lengthIdx].finish;
 
 let trackMetricsCache=null, trackMetricsCacheN=-1;
 function invalidateTrackMetrics(){ trackMetricsCache=null; trackMetricsCacheN=-1; }
-/* On-screen track geometry (in CSS px, recomputed each frame from VW/VH) */
+/* On-screen track geometry — compact pixel-art lanes, generous sky for parallax */
 function trackMetrics(n){
   if(trackMetricsCache && trackMetricsCacheN===n) return trackMetricsCache;
-  var topPad = Math.max(64, VH*0.16);            // sky above
-  var botPad = Math.max(48, VH*0.10);
-  var bandH  = VH - topPad - botPad;
-  var laneH  = bandH / Math.max(n,1);
-  trackMetricsCache={topPad, botPad, bandH, laneH};
+  n=Math.max(n,1);
+  const skyRatio=0.44;
+  const botRatio=0.10;
+  const idealLaneH=Math.round(PXS*(GH+2));
+  const maxBandH=Math.floor(VH*(1-skyRatio-botRatio));
+  let laneH=idealLaneH;
+  let bandH=laneH*n;
+  if(bandH>maxBandH){
+    laneH=Math.max(Math.floor(PXS*8),Math.floor(maxBandH/n));
+    bandH=laneH*n;
+  }
+  const topPad=Math.floor(VH*skyRatio);
+  const botPad=VH-topPad-bandH;
+  const horizonH=Math.max(Math.round(PXS*2),10);
+  trackMetricsCache={topPad,botPad,bandH,laneH,horizonH,skyBottom:topPad+horizonH};
   trackMetricsCacheN=n;
   return trackMetricsCache;
 }
@@ -50,6 +62,78 @@ function laneCenterY(i,n){ const m=trackMetrics(n); return m.topPad + m.laneH*(i
    SCENE BACKGROUND
    ============================================================ */
 let starField=null;
+let backgroundImages={};
+
+function drawParallaxLayer(img, parallax, anchorBottom){
+  if(!img) return;
+  const scale=anchorBottom/img.height;
+  const tileW=img.width*scale;
+  const drawH=anchorBottom;
+  const scroll=((camX*pxPerUnit*parallax)%tileW+tileW)%tileW;
+  ctx.imageSmoothingEnabled=false;
+  for(let x=-scroll-tileW; x<VW+tileW; x+=tileW){
+    ctx.drawImage(img, Math.round(x), 0, Math.round(tileW), Math.round(drawH));
+  }
+}
+
+function drawFrontParallaxLayer(img, parallax, anchorBottom, scale){
+  if(!img) return;
+  const tileW=img.width*scale;
+  const drawH=img.height*scale;
+  const drawY=Math.round(anchorBottom-drawH);
+  const scroll=((camX*pxPerUnit*parallax)%tileW+tileW)%tileW;
+  ctx.imageSmoothingEnabled=false;
+  for(let x=-scroll-tileW; x<VW+tileW; x+=tileW){
+    ctx.drawImage(img, Math.round(x), drawY, Math.round(tileW), Math.round(drawH));
+  }
+}
+
+function drawPixelGround(y0,y1,base,dark,speck){
+  const cell=Math.max(4,Math.round(PXS*0.75));
+  ctx.fillStyle=base; ctx.fillRect(0,y0,VW,y1-y0);
+  for(let py=y0; py<y1; py+=cell){
+    for(let px=((py/cell|0)%2)*cell; px<VW; px+=cell*2){
+      ctx.fillStyle=dark; ctx.globalAlpha=0.22;
+      ctx.fillRect(px,py,cell,cell);
+    }
+  }
+  ctx.globalAlpha=1;
+  for(let px=0; px<VW; px+=cell*3){
+    ctx.fillStyle=speck; ctx.globalAlpha=0.18;
+    ctx.fillRect(px,y0+((px/cell|0)%2)*cell,cell,Math.max(2,cell/2));
+  }
+  ctx.globalAlpha=1;
+}
+
+function drawPixelLaneBand(S,m,n){
+  const cell=Math.max(4,Math.round(PXS*0.75));
+  for(let i=0;i<n;i++){
+    const y0=Math.round(m.topPad+m.laneH*i);
+    const y1=y0+m.laneH;
+    const base=(i%2)? S.track : S.groundDark;
+    const alt=(i%2)? S.groundDark : S.track;
+    ctx.fillStyle=base; ctx.fillRect(0,y0,VW,m.laneH);
+    for(let py=y0; py<y1; py+=cell){
+      for(let px=((py/cell|0)+i)%2*cell; px<VW; px+=cell*2){
+        ctx.fillStyle=alt; ctx.globalAlpha=0.18;
+        ctx.fillRect(px,py,cell,cell);
+      }
+    }
+    ctx.globalAlpha=1;
+    ctx.fillStyle=S.laneLine; ctx.globalAlpha=0.12;
+    for(let px=(i*cell)%3; px<VW; px+=cell*4){
+      ctx.fillRect(px,y0+cell,Math.max(2,cell/2),Math.max(2,cell/2));
+    }
+    ctx.globalAlpha=1;
+    ctx.fillStyle='rgba(255,255,255,0.14)';
+    ctx.fillRect(0,y0,VW,Math.max(2,Math.round(cell/3)));
+    ctx.fillStyle=S.laneLine;
+    ctx.fillRect(0,y0,VW,2);
+    if(i===n-1) ctx.fillRect(0,y1-2,VW,2);
+  }
+  ctx.fillStyle=S.laneLine; ctx.fillRect(0,Math.round(m.topPad+m.bandH),VW,2);
+}
+
 function ensureStars(){
   if(starField) return;
   starField=[]; for(let i=0;i<70;i++) starField.push({x:Math.random(),y:Math.random()*0.5,t:Math.random()*6});
@@ -60,63 +144,40 @@ function drawVerticalGradient(x0,y0,w,h,top,bot){
 }
 function drawScene(n,timeT){
   const S=SCENES[sceneIdx], T=THEMES[themeIdx];
-  const sky = T.sky || S.sky;
-  // sky
-  drawVerticalGradient(0,0,VW,VH,sky[0],sky[1]);
-  // stars
+  const m=trackMetrics(n);
+  const sky=(T.sky||S.sky);
+  const layers=S.layers||[];
+  const backLayers=[], frontLayers=[];
+  layers.forEach(function(layer){ (layer.front? frontLayers : backLayers).push(layer); });
+
+  if(sky) drawVerticalGradient(0,0,VW,m.skyBottom,sky[0],sky[1]);
+
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0,0,VW,m.skyBottom); ctx.clip();
+  backLayers.forEach(function(layer,i){
+    const par=layer.parallax!=null? layer.parallax : defaultParallax(i,backLayers.length);
+    drawParallaxLayer(backgroundImages[layer.src], par, m.skyBottom);
+  });
+  ctx.restore();
+
   if(T.star){ ensureStars(); ctx.fillStyle='#fff';
     starField.forEach(function(s){ var a=0.5+0.5*Math.sin(timeT*1.5+s.t); ctx.globalAlpha=a*0.9;
-      ctx.fillRect(Math.floor(s.x*VW), Math.floor(s.y*VH*0.6), 2,2); }); ctx.globalAlpha=1; }
-  // sun/moon
-  if(T.key!=='night'){ ctx.fillStyle=T.key==='sunset'?'#ff7a3c':'#fff3c4'; var sx=VW*0.78, sy=VH*0.16, r=Math.max(14,VW*0.03);
-    ctx.beginPath(); ctx.arc(sx,sy,r,0,7); ctx.fill(); }
-  else { ctx.fillStyle='#eef2ff'; var mx=VW*0.8,my=VH*0.13,mr=Math.max(12,VW*0.026);
-    ctx.beginPath(); ctx.arc(mx,my,mr,0,7); ctx.fill(); ctx.fillStyle=sky[0]; ctx.beginPath(); ctx.arc(mx+mr*0.4,my-mr*0.3,mr*0.85,0,7); ctx.fill(); }
+      ctx.fillRect(Math.floor(s.x*VW), Math.floor(s.y*m.skyBottom*0.82), 2,2); }); ctx.globalAlpha=1; }
 
-  const m=trackMetrics(n);
-  // distant ground strip above track (horizon)
-  ctx.fillStyle=S.ground; ctx.fillRect(0,m.topPad-Math.max(10,VH*0.05),VW,Math.max(10,VH*0.05)+4);
-  // background props on the horizon (parallax)
-  drawHorizonProps(S,m,timeT);
+  drawPixelGround(m.topPad-m.horizonH,m.topPad,S.ground,S.groundDark,S.laneLine);
+  drawPixelLaneBand(S,m,n);
+  drawPixelGround(m.topPad+m.bandH+2,VH,S.groundDark,S.track,S.laneLine);
 
-  // ---- the track band (lanes) ----
-  for(let i=0;i<n;i++){
-    var y=m.topPad + m.laneH*i;
-    ctx.fillStyle = (i%2)? S.track : S.groundDark;
-    ctx.fillRect(0,y,VW,Math.ceil(m.laneH)+1);
-    // lane divider
-    ctx.fillStyle=S.laneLine; ctx.fillRect(0,Math.round(y),VW,2);
-  }
-  // bottom divider
-  ctx.fillStyle=S.laneLine; ctx.fillRect(0,Math.round(m.topPad+m.bandH),VW,2);
-  // foreground ground below
-  ctx.fillStyle=S.groundDark; ctx.fillRect(0,m.topPad+m.bandH+2,VW,VH);
+  const bgScale=backLayers.length && backgroundImages[backLayers[0].src]
+    ? m.skyBottom/backgroundImages[backLayers[0].src].height : m.skyBottom/324;
+  frontLayers.forEach(function(layer,i){
+    const par=layer.parallax!=null? layer.parallax : defaultParallax(backLayers.length+i,layers.length);
+    drawFrontParallaxLayer(backgroundImages[layer.src], par, m.topPad, bgScale);
+  });
 
-  // time overlay tint
   if(T.overlay && T.overlay.indexOf(',0)')<0){ ctx.fillStyle=T.overlay; ctx.fillRect(0,0,VW,VH); }
 
-  // ---- start & finish lines ----
   drawStartFinish(n,m);
-}
-
-function drawHorizonProps(S,m,timeT){
-  // a few props sitting on the horizon line, scrolling with parallax (slower)
-  const baseY=m.topPad-4;
-  const par=0.45;                                  // parallax factor
-  const spacing=22;                                // world units between props
-  const first=Math.floor((camX*par)/spacing)*spacing;
-  for(let wx=first-spacing; wx< camX*par + VW/pxPerUnit + spacing; wx+=spacing){
-    var sx=(wx - camX*par)*pxPerUnit;
-    drawProp(S.prop, sx, baseY, Math.max(2,Math.round(PXS*0.8)));
-  }
-}
-/* prop drawer: kind, screen x (base), baseline y, pixel size p */
-function drawProp(kind,sx,by,p){
-  function R(dx,dy,w,h,c){ ctx.fillStyle=c; ctx.fillRect(Math.round(sx+dx*p),Math.round(by-dy*p-h*p),Math.ceil(w*p),Math.ceil(h*p)); }
-  if(kind==='palm'){ R(2,0,2,8,'#a9774a'); R(-2,8,8,1,'#3da45a'); R(-3,9,4,1,'#3da45a'); R(3,9,4,1,'#3da45a'); R(0,10,5,2,'#3da45a'); }
-  else if(kind==='pine'||kind==='pinesnow'){ R(2,0,2,3,'#7a5230'); var gc=kind==='pinesnow'?'#3f7a4f':'#2f8f4a'; R(0,3,6,1,gc); R(1,4,4,2,gc); R(2,6,2,2,gc); if(kind==='pinesnow'){R(2,7,2,1,'#fff');} }
-  else if(kind==='cactus'){ R(2,0,2,7,'#3f9f5f'); R(0,3,2,2,'#3f9f5f'); R(4,4,2,2,'#3f9f5f'); }
-  else if(kind==='lavarock'){ R(0,0,6,4,'#2a2428'); R(2,1,2,1,'#ff5a1e'); R(1,3,1,1,'#ff5a1e'); }
 }
 
 function drawStartFinish(n,m){
@@ -131,7 +192,7 @@ function drawStartFinish(n,m){
     for(let yy=0; yy<h; yy+=cell){
       for(let k=0;k<2;k++){
         var on=((Math.floor(yy/cell)+k)%2)===0;
-        ctx.fillStyle=on?'#fff':'#161018';
+        ctx.fillStyle=on?'#fff':'#3d3018';
         ctx.fillRect(Math.round(fx)+k*cell, top+yy, cell, Math.min(cell,h-yy));
       }
     }
@@ -146,7 +207,10 @@ function drawStartFinish(n,m){
    Pre-render each (char, color, frame) to an offscreen canvas once.
    ============================================================ */
 const spriteCache={};
+let sheetImages={};
+
 function getSprite(charIdx,color,frame){
+  if(CHARACTERS[charIdx].sheet) return null;
   const key=charIdx+'|'+color+'|'+frame;
   if(spriteCache[key]) return spriteCache[key];
   const cell=4;                                    // internal art-pixel size in the cache bitmap
@@ -160,9 +224,26 @@ function clearSpriteCache(){ for(const k in spriteCache) delete spriteCache[k]; 
 
 /* draw a cached sprite centered at screen (cx,cyBaseline), scaled to pixel size p */
 function blitSprite(charIdx,color,frame,cx,cyBaseline,p,flash){
+  const ch=CHARACTERS[charIdx];
+  const size=spriteScreenSize(ch,p);
+  const dx=Math.round(cx-size.w/2), dy=Math.round(cyBaseline-size.h);
+
+  if(ch.sheet){
+    const img=sheetImages[ch.sheet.src];
+    if(!img) return;
+    const fw=ch.sheet.frameW, fh=ch.sheet.frameH;
+    const sx=frame*fw;
+    ctx.drawImage(img,sx,0,fw,fh,dx,dy,size.w,size.h);
+    if(flash){
+      ctx.globalAlpha=0.35; ctx.globalCompositeOperation='lighter';
+      ctx.drawImage(img,sx,0,fw,fh,dx,dy,size.w,size.h);
+      ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=1;
+    }
+    return;
+  }
+
   const bmp=getSprite(charIdx,color,frame);
-  const w=GW*p, h=GH*p;
-  const dx=Math.round(cx - w/2), dy=Math.round(cyBaseline - h);
+  const w=size.w, h=size.h;
   ctx.drawImage(bmp,dx,dy,w,h);
   if(flash){ ctx.globalAlpha=0.35; ctx.globalCompositeOperation='lighter'; ctx.drawImage(bmp,dx,dy,w,h); ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=1; }
 }
@@ -171,9 +252,9 @@ function blitSprite(charIdx,color,frame,cx,cyBaseline,p,flash){
    ============================================================ */
 let state='lobby';
 let players=[
-  {name:'',colorIdx:4,charIdx:5},   // ninja, cyan
-  {name:'',colorIdx:0,charIdx:6},   // speedster, red
-  {name:'',colorIdx:3,charIdx:0},   // turtle, green
+  {name:'',colorIdx:4,charIdx:0},   // fighter
+  {name:'',colorIdx:0,charIdx:1},   // samurai
+  {name:'',colorIdx:3,charIdx:2},   // shinobi
 ];
 let racers=[], finishOrder=[];
 let raceStartT=0, winnerCrossRealT=0, allDoneT=0, forceEndT=0;
@@ -196,18 +277,18 @@ let muteCanvas, mcx;
 function drawMuteIcon(){
   const cell=2; mcx.imageSmoothingEnabled=false; mcx.clearRect(0,0,muteCanvas.width,muteCanvas.height);
   function r(x,y,w,h,c){ mcx.fillStyle=c; mcx.fillRect(x*cell,y*cell,w*cell,h*cell); }
-  const ink='#fff3d6';
+  const ink='#3d3018';
   // speaker body (cone + box) — 11x11 grid
   r(1,4,2,3,ink);        // back box
   r(3,3,1,5,ink);        // mid
   r(4,2,1,7,ink);        // cone face top..bottom
   r(5,1,1,9,ink);        // front edge
-  if(!muted){            // sound waves (cyan)
-    const w='#2ee6c0';
+  if(!muted){            // sound waves (ocean blue)
+    const w='#2dadc8';
     r(7,3,1,5,w); r(8,2,1,1,w); r(8,8,1,1,w);
     r(9,1,1,2,w); r(9,8,1,2,w);
-  } else {               // mute: red X
-    const x='#ff5d8f';
+  } else {               // mute: coral X
+    const x='#d94040';
     r(7,2,1,1,x); r(8,3,1,1,x); r(9,4,1,1,x); r(8,5,1,1,x); r(7,6,1,1,x);
     r(9,2,1,1,x); r(7,4,1,1,x); r(9,6,1,1,x);
   }
@@ -299,6 +380,63 @@ function updateRacers(dt){
   for(let i=bananas.length-1;i>=0;i--){ var b=bananas[i]; if(b.dead && realT-b.deadT>0.5) bananas.splice(i,1); }
   if(state==='racing'){ powerups.forEach(function(b){ if(!b.alive && realT>b.respawnAt) placeBox(b,false); }); }
 }
+
+/** Pixel-art mystery crate — golden box with ? glyph and soft pulse. */
+function drawPowerupBox(cx, cy, bob, spin){
+  const cell=Math.max(3,Math.round(PXS*0.72));
+  const bx=Math.round(cx-cell*6.5);
+  const by=Math.round(cy-cell*6.5+bob);
+  function px(dx,dy,w,h,col){
+    ctx.fillStyle=col;
+    ctx.fillRect(bx+dx*cell,by+dy*cell,w*cell,h*cell);
+  }
+
+  const glow=0.14+0.1*Math.sin(clockT*5+spin);
+  ctx.fillStyle='#fff6b8';
+  ctx.globalAlpha=glow;
+  ctx.fillRect(bx-cell,by-cell,cell*15,cell*15);
+  ctx.globalAlpha=1;
+
+  ctx.fillStyle='rgba(0,0,0,.22)';
+  ctx.beginPath();
+  ctx.ellipse(cx,by+cell*13.5,cell*5,cell*1.6,0,0,7);
+  ctx.fill();
+
+  px(0,0,13,13,'#1a1020');
+  px(1,1,11,11,'#b88412');
+  px(2,2,9,9,'#ffd928');
+  px(2,2,9,3,'#ffe566');
+  px(2,9,9,2,'#c99418');
+  px(1,1,2,2,'#fff3b0');
+  px(10,1,2,2,'#fff3b0');
+  px(1,10,2,2,'#7a5608');
+  px(10,10,2,2,'#7a5608');
+  px(1,6,11,1,'#a87310');
+  px(6,1,1,11,'#a87310');
+
+  px(5,3,3,1,'#1a1020');
+  px(4,4,1,2,'#1a1020');
+  px(5,4,4,1,'#1a1020');
+  px(8,5,1,2,'#1a1020');
+  px(5,7,3,1,'#1a1020');
+  px(6,8,1,2,'#1a1020');
+  px(6,10,1,1,'#1a1020');
+  px(5,3,3,1,'#fffef0');
+  px(4,4,1,1,'#fffef0');
+  px(5,4,3,1,'#fffef0');
+  px(8,5,1,1,'#fffef0');
+  px(5,7,3,1,'#fffef0');
+  px(6,8,1,1,'#fffef0');
+  px(6,10,1,1,'#fffef0');
+
+  const spark=Math.sin(clockT*6+spin*2);
+  if(spark>0.35){
+    ctx.globalAlpha=Math.min(1,(spark-0.35)*1.4);
+    px(spark>0.75?11:1,spark>0.75?2:11,1,1,'#fff');
+    px(spark>0.75?2:10,spark>0.75?11:3,1,1,'#fff');
+    ctx.globalAlpha=1;
+  }
+}
 /* ============================================================
    RENDER RACERS + on-track items
    ============================================================ */
@@ -310,10 +448,8 @@ function drawRacersAndItems(n){
   // power-up boxes
   if(powerUpsOn && (state==='racing'||state==='countdown')){
     powerups.forEach(function(b){ if(!b.alive)return; var sx=worldToScreenX(b.x); if(sx<-20||sx>VW+20)return;
-      var cy=laneCenterY(b.lane,n); var s=Math.max(10,p*4); var bob=Math.sin(clockT*3+b.spin)*3;
-      ctx.fillStyle='#ffcf3a'; ctx.fillRect(Math.round(sx-s/2),Math.round(cy-s/2+bob),s,s);
-      ctx.fillStyle='#b9821e'; ctx.fillRect(Math.round(sx-2),Math.round(cy-s*0.32+bob),4,Math.round(s*0.5));
-      ctx.fillStyle='#241326'; ctx.fillRect(Math.round(sx-s/2),Math.round(cy-s/2+bob),s,2); ctx.fillRect(Math.round(sx-s/2),Math.round(cy+s/2-2+bob),s,2);
+      var cy=laneCenterY(b.lane,n); var bob=Math.sin(clockT*3+b.spin)*3;
+      drawPowerupBox(sx,cy,bob,b.spin);
     });
   }
   // bananas
@@ -327,24 +463,29 @@ function drawRacersAndItems(n){
   order.forEach(function(idx){
     var r=racers[idx]; var sx=worldToScreenX(r.x);
     var cy=laneCenterY(r.i,n);
-    var frame=(r.gait>0.3)? (Math.floor(r.phase)%4) : 1;   // 4-frame run; frame 1 = neutral stance when idle
+    var ch=CHARACTERS[r.p.charIdx];
+    var frameCount=frameCountFor(ch);
+    var idleFrame=idleFrameFor(ch);
+    var frame=(r.gait>0.3)? (Math.floor(r.phase)%frameCount) : idleFrame;
     var popScale=r.pop<1? (0.4+0.6*r.pop):1;
+    var scale=p*popScale;
+    var sz=spriteScreenSize(ch,scale);
     // vertical bob: peaks on the "pass" frames of the cycle
     var bob=(r.gait>0.3)? Math.abs(Math.sin(r.phase*Math.PI*0.5))*(p*1.1) : 0;
     var baseline=cy + m.laneH*0.32 - bob;
     // shadow
-    ctx.fillStyle='rgba(0,0,0,.20)'; var shW=GW*p*0.6; ctx.beginPath();
+    ctx.fillStyle='rgba(0,0,0,.20)'; var shW=sz.w*0.55; ctx.beginPath();
     ctx.ellipse(sx, cy+m.laneH*0.34, shW*0.5, Math.max(3,p*1.4), 0,0,7); ctx.fill();
     // shield bubble
-    if(r.shielded){ ctx.strokeStyle='rgba(159,232,255,.9)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(sx,baseline-GH*p*0.5,GW*p*0.6,0,7); ctx.stroke(); }
+    if(r.shielded){ ctx.strokeStyle='rgba(159,232,255,.9)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(sx,baseline-sz.h*0.5,sz.w*0.45,0,7); ctx.stroke(); }
     var starred=r.starEnd>clockT;
-    blitSprite(r.p.charIdx, COLORS[r.p.colorIdx], frame, sx, baseline, p*popScale, starred);
+    blitSprite(r.p.charIdx, COLORS[r.p.colorIdx], frame, sx, baseline, scale, starred);
     // floating fx glyph
     if(r.fxT && realT-r.fxT<0.9){ var age=realT-r.fxT; ctx.globalAlpha=Math.max(0,1-age*1.1);
       ctx.fillStyle=r.fxColor||'#fff'; ctx.font='bold '+Math.round(p*5)+'px "Press Start 2P",monospace'; ctx.textAlign='center';
-      ctx.fillText(r.fxText||'', sx, baseline-GH*p - age*22); ctx.globalAlpha=1; ctx.textAlign='left'; }
+      ctx.fillText(r.fxText||'', sx, baseline-sz.h - age*22); ctx.globalAlpha=1; ctx.textAlign='left'; }
     // name label (HTML-free, drawn on canvas) above racer
-    drawNameLabel(displayName(r.p,r.i), COLORS[r.p.colorIdx], sx, baseline-GH*p-8, r.i, n);
+    drawNameLabel(displayName(r.p,r.i), COLORS[r.p.colorIdx], sx, baseline-sz.h-8, r.i, n);
   });
 }
 
@@ -357,13 +498,13 @@ function drawNameLabel(name,color,cx,cy,laneI,n){
   var yy=cy - (laneI%2? 0: h*0.0);
   var x=cx - w/2;
   // box
-  ctx.fillStyle='rgba(20,12,26,.82)'; ctx.fillRect(Math.round(x),Math.round(yy-h/2),Math.round(w),Math.round(h));
-  ctx.fillStyle='rgba(255,255,255,.10)'; ctx.fillRect(Math.round(x),Math.round(yy-h/2),Math.round(w),2);
+  ctx.fillStyle='rgba(61,48,24,.88)'; ctx.fillRect(Math.round(x),Math.round(yy-h/2),Math.round(w),Math.round(h));
+  ctx.fillStyle='rgba(255,255,255,.12)'; ctx.fillRect(Math.round(x),Math.round(yy-h/2),Math.round(w),2);
   // dot
   ctx.fillStyle=color; ctx.fillRect(Math.round(x+padX),Math.round(yy-dot/2),Math.round(dot),Math.round(dot));
-  ctx.fillStyle='rgba(0,0,0,.4)'; ctx.fillRect(Math.round(x+padX),Math.round(yy-dot/2),Math.round(dot),2);
+  ctx.fillStyle='rgba(61,48,24,.35)'; ctx.fillRect(Math.round(x+padX),Math.round(yy-dot/2),Math.round(dot),2);
   // text
-  ctx.fillStyle='#fff6e8'; ctx.textAlign='left'; ctx.fillText(name, Math.round(x+padX+dot+gap), Math.round(yy)+1);
+  ctx.fillStyle='#f5e6c4'; ctx.textAlign='left'; ctx.fillText(name, Math.round(x+padX+dot+gap), Math.round(yy)+1);
 }
 
 /* ============================================================
@@ -453,10 +594,22 @@ function setSlowmo(on){ if(on===slowmoActive)return; slowmoActive=on; finishFlas
    LOBBY UI  (mini sprite preview in the "pick" button)
    ============================================================ */
 function drawPickPreview(canvas,charIdx,color){
+  const ch=CHARACTERS[charIdx];
+  if(ch.sheet){
+    const img=sheetImages[ch.sheet.src];
+    const fw=ch.sheet.frameW, fh=ch.sheet.frameH;
+    const maxW=GW*3, maxH=GH*3;
+    const scale=Math.min(maxW/fw, maxH/fh);
+    canvas.width=Math.ceil(fw*scale);
+    canvas.height=Math.ceil(fh*scale);
+    const cx=canvas.getContext('2d'); cx.imageSmoothingEnabled=false; cx.clearRect(0,0,canvas.width,canvas.height);
+    if(img) cx.drawImage(img,0,0,fw,fh,0,0,canvas.width,canvas.height);
+    return;
+  }
   const cell=3, pad=1; canvas.width=GW*cell; canvas.height=GH*cell;
   const cx=canvas.getContext('2d'); cx.imageSmoothingEnabled=false; cx.clearRect(0,0,canvas.width,canvas.height);
   function g(x,y,w,h,c){ cx.fillStyle=c; cx.fillRect(x*cell,y*cell,w*cell,h*cell); }
-  CHARACTERS[charIdx].draw(g,0,color);
+  ch.draw(g,0,color);
 }
 function freeColor(){ const used=players.map(function(p){return p.colorIdx;}); for(let i=0;i<COLORS.length;i++) if(used.indexOf(i)<0)return i; return Math.floor(Math.random()*COLORS.length); }
 function nextFreeColor(from){ const used=players.map(function(p){return p.colorIdx;}); for(let k=1;k<=COLORS.length;k++){ const i=(from+k)%COLORS.length; if(used.indexOf(i)<0)return i; } return (from+1)%COLORS.length; }
@@ -565,7 +718,11 @@ function frame(now){
     if(state==='racing'&&realT>nextEventT){ fireEvent(); nextEventT=realT+rnd(12,18); } }
 }
 
-export function bootGame() {
+export async function bootGame() {
+  [sheetImages, backgroundImages]=await Promise.all([
+    loadSpriteSheets(CHARACTERS),
+    loadBackgroundLayers(SCENES),
+  ]);
   bindUi();
   renderLobby();
   buildRacers();
