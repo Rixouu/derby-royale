@@ -7,9 +7,9 @@ Derby Royale is a **Vite static site** — build output goes to `dist/`. No serv
 | Setting | Value |
 |---------|--------|
 | Framework Preset | **Vite** (auto-detected from `vite.config.js`) |
-| Build Command | `npm run build` |
+| Build Command | `pnpm build` |
 | Output Directory | `dist` |
-| Install Command | `npm install` |
+| Install Command | `pnpm install` |
 | Node.js | 20+ recommended |
 
 Connect the GitHub repo [Rixouu/derby-royale](https://github.com/Rixouu/derby-royale) and deploy from `main`.
@@ -35,10 +35,11 @@ Optional alias: **`/play`** → `/` (rewrite in `vercel.json`)
 ## Local development
 
 ```bash
-npm install
-npm run dev        # hot reload at localhost:5173
-npm run build      # production bundle → dist/
-npm run preview    # serve dist/ locally
+corepack enable
+pnpm install
+pnpm dev         # hot reload at http://localhost:5173
+pnpm build       # production bundle → dist/
+pnpm preview     # serve dist/ at http://localhost:4173
 ```
 
 ## Custom domain
@@ -68,7 +69,7 @@ Vercel dashboard → **Deployments** → previous deployment → **Promote to Pr
 ## Checklist (first deploy)
 
 - [ ] Repo linked to Vercel with Vite preset
-- [ ] Build succeeds (`npm run build` locally first)
+- [ ] Build succeeds (`pnpm build` locally first)
 - [ ] `/` loads the lobby
 - [ ] Fonts render (no Google Fonts network call)
 - [ ] `/derby-royale.html` redirects to `/`
@@ -79,7 +80,7 @@ Vercel dashboard → **Deployments** → previous deployment → **Promote to Pr
 
 | Issue | Fix |
 |-------|-----|
-| Build fails on Vercel | Run `npm run build` locally; check Node 20+ |
+| Build fails on Vercel | Run `pnpm build` locally; check Node 20+ and `pnpm-lock.yaml` is committed |
 | Blank page | Browser console; verify `dist/index.html` references `/assets/` |
 | Fonts missing | Ensure `public/fonts/*.woff2` exist and built to `dist/fonts/` |
 | Stale bundle after deploy | Hard refresh; hashed assets in `/assets/` should bust cache |

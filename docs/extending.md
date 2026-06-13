@@ -1,6 +1,6 @@
 # Extending Derby Royale
 
-Source lives under **`src/game/`**. Run **`npm run dev`** while editing, then **`npm run build`** before deploy.
+Source lives under **`src/game/`**. Run **`pnpm dev`** while editing, then **`pnpm build`** before deploy.
 
 Comments in `characters.js` and `scenes.js` mark the main extension points.
 

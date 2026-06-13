@@ -72,23 +72,28 @@ Full rules and house variants: **[docs/game-rules.md](docs/game-rules.md)**
 ### Develop locally
 
 ```bash
-npm install
-npm run dev
+corepack enable
+pnpm install
+pnpm dev
 ```
 
-Open the URL Vite prints (usually `http://localhost:5173`).
+Open **http://localhost:5173** (Vite prints the URL in the terminal).
 
 ### Production build
 
 ```bash
-npm run build
-npm run preview   # optional — serve dist/ locally
+pnpm build
+pnpm preview   # optional — serve dist/ at http://localhost:4173
 ```
+
+### Play online
+
+No install needed — **[derby-royale.vercel.app](https://derby-royale.vercel.app/)**
 
 ### Deploy on Vercel
 
 1. Import [github.com/Rixouu/derby-royale](https://github.com/Rixouu/derby-royale) in Vercel.
-2. Framework preset: **Vite** (auto-detected) — build: `npm run build`, output: `dist`.
+2. Framework preset: **Vite** (auto-detected) — install: `pnpm install`, build: `pnpm build`, output: `dist`.
 3. Deploy — live at **[derby-royale.vercel.app](https://derby-royale.vercel.app/)**.
 
 Optional share URL: **`/play`** (rewrite to `/`). Details in **[docs/deployment.md](docs/deployment.md)**.
@@ -118,6 +123,7 @@ derby-royale/
 ├── docs/
 ├── vite.config.js
 ├── package.json
+├── pnpm-lock.yaml
 └── vercel.json
 ```
 
@@ -148,7 +154,7 @@ Expand **How to play & power-ups** in the lobby for the in-game rule card.
 
 Contributions are welcome.
 
-1. Keep changes in **`src/game/`** — run `npm run dev` to verify.
+1. Keep changes in **`src/game/`** — run **`pnpm dev`** to verify.
 2. Preserve the pixel-art aesthetic and mobile-first layout.
 3. Test on both desktop and a phone-sized viewport before opening a PR.
 4. Update **docs** when you change rules or extension APIs.
