@@ -1,13 +1,8 @@
 # Extending Derby Royale
 
-The entire game lives in **`index.html`** (HTML + CSS + JavaScript). There is no build step — edit the file, refresh the browser, and test.
+Source lives under **`src/game/`**. Run **`npm run dev`** while editing, then **`npm run build`** before deploy.
 
-Comments at the top of the script block mark the main extension points:
-
-```javascript
-/* To ADD A CHARACTER: add an entry to CHARACTERS with a draw(g,frame,tint) fn.
-   To ADD A SCENE: add an entry to SCENES with colors + drawProp fns. */
-```
+Comments in `characters.js` and `scenes.js` mark the main extension points.
 
 ## Architecture (quick map)
 
@@ -25,7 +20,7 @@ Sprite grid size: **`GW = 18`**, **`GH = 22`** art pixels. Characters face **rig
 
 ## Adding a character
 
-1. Open `index.html` and find the `CHARACTERS` array.
+1. Open **`src/game/characters.js`** and find the `CHARACTERS` array.
 2. Add an object:
 
 ```javascript
@@ -58,7 +53,7 @@ Sprite grid size: **`GW = 18`**, **`GH = 22`** art pixels. Characters face **rig
 
 ## Adding a scene
 
-1. Find the `SCENES` array.
+1. Find the `SCENES` array in **`src/game/scenes.js`**.
 2. Add an entry:
 
 ```javascript
@@ -75,8 +70,8 @@ Sprite grid size: **`GW = 18`**, **`GH = 22`** art pixels. Characters face **rig
 },
 ```
 
-3. Implement the prop in **`drawProp(g, kind, …)`** (search for existing `palm`, `cactus`, etc.) using the same `g()` pixel helper.
-4. Add a lobby button in the HTML `#sceneSeg` segment (copy an existing `<button data-i="…">`).
+3. Implement the prop in **`drawProp()`** inside **`src/game/engine.js`** (search for `palm`, `cactus`, etc.) using the same `R()` pixel helper.
+4. Add a lobby button in **`index.html`** `#sceneSeg` (copy an existing `<button data-i="…">`).
 
 Scene index `data-i` must match the array index (0-based).
 
@@ -86,22 +81,22 @@ Scene index `data-i` must match the array index (0-based).
 
 ## Power-ups
 
-Types are defined in:
+Types are defined in **`src/game/config.js`**:
 
 ```javascript
-const POWERUP_TYPES = ['boost', 'star', 'banana', 'bolt', 'shield'];
+export const POWERUP_TYPES = ['boost', 'star', 'banana', 'bolt', 'shield'];
 ```
 
 To add a type:
 
-1. Append a key to `POWERUP_TYPES`.
-2. Add entries to **`POWERUP_COLOR`** and **`POWERUP_GLYPH`** (HUD floating text).
-3. Handle behaviour in **`applyPowerup(r, type)`**.
-4. Document it in the lobby `.pw-legend` and in [game-rules.md](./game-rules.md).
+1. Append a key to `POWERUP_TYPES` in **`config.js`**.
+2. Add entries to **`POWERUP_COLOR`** and **`POWERUP_GLYPH`** in the same file.
+3. Handle behaviour in **`applyPowerup()`** in **`src/game/engine.js`**.
+4. Document in the lobby `.pw-legend` in **`index.html`** and in [game-rules.md](./game-rules.md).
 
 ## Colours
 
-Player colours come from **`COLORS`** (8 defaults). Add hex values there; the lobby assigns unique indices when possible.
+Player colours come from **`COLORS`** in **`src/game/config.js`**.
 
 ## Audio
 
@@ -116,18 +111,9 @@ SFX uses the **Web Audio API** (`tone()`, `sfxPow()`, etc.). Hook new events the
 - [ ] Mobile viewport (narrow width, short height)
 - [ ] `prefers-reduced-motion` — countdown still readable
 
-## When to split the file
+## When to split further
 
-Stay in one HTML file until editing becomes painful. If you outgrow it, a sensible split:
-
-```txt
-src/game/characters.js
-src/game/scenes.js
-src/game/engine.js
-src/styles/game.css
-```
-
-That would require a small bundler (e.g. Vite) — only worth it if you’re adding many assets or contributors.
+The engine is still one file (`engine.js`). If that grows too large, split render/simulation/UI into separate modules — Vite already code-splits **`characters.js`** and **`scenes.js`** into their own chunks.
 
 ## Contributing
 

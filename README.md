@@ -61,31 +61,35 @@ Full rules and house variants: **[docs/game-rules.md](docs/game-rules.md)**
 
 ## 🛠 Tech Stack
 
-- **Single-file app**: `index.html` (HTML + CSS + vanilla JavaScript).
-- **Canvas 2D** rendering with a low-res pixel scale (`image-rendering: pixelated`).
-- **Web Audio API** for sound — no external libraries.
-- **Google Fonts** for pixel typography (loaded from CDN when online).
-- **Vercel** static hosting — see **[docs/deployment.md](docs/deployment.md)**.
-
-No bundler, framework, or package manager required.
+- **Vite** — dev server and production bundle (split ES modules, hashed assets)
+- **Canvas 2D** rendering with a low-res pixel scale (`image-rendering: pixelated`)
+- **Web Audio API** for sound — no external libraries
+- **Self-hosted fonts** — Press Start 2P & Jersey 10 (WOFF2 in `public/fonts/`)
+- **Vercel** static hosting — see **[docs/deployment.md](docs/deployment.md)**
 
 ## 🚀 Quick Start
 
-### Play locally
+### Develop locally
 
 ```bash
-# Recommended — local static server
-python3 -m http.server 8080
-# open http://localhost:8080
+npm install
+npm run dev
 ```
 
-Or open `index.html` directly (some browsers restrict audio on `file://`).
+Open the URL Vite prints (usually `http://localhost:5173`).
+
+### Production build
+
+```bash
+npm run build
+npm run preview   # optional — serve dist/ locally
+```
 
 ### Deploy on Vercel
 
 1. Import [github.com/Rixouu/derby-royale](https://github.com/Rixouu/derby-royale) in Vercel.
-2. Framework preset: **Other** — leave build/output commands empty.
-3. Deploy — the game is live at **[derby-royale.vercel.app](https://derby-royale.vercel.app/)**.
+2. Framework preset: **Vite** (auto-detected) — build: `npm run build`, output: `dist`.
+3. Deploy — live at **[derby-royale.vercel.app](https://derby-royale.vercel.app/)**.
 
 Optional share URL: **`/play`** (rewrite to `/`). Details in **[docs/deployment.md](docs/deployment.md)**.
 
@@ -93,22 +97,28 @@ Optional share URL: **`/play`** (rewrite to `/`). Details in **[docs/deployment.
 
 ```txt
 derby-royale/
-├── index.html           # Full game (production entry point)
-├── derby-royale.html    # Legacy redirect → /
-├── favicon.svg          # Vector favicon (modern browsers)
-├── favicon-32x32.png
-├── favicon-16x16.png
-├── apple-touch-icon.png # Add to Home Screen (iOS)
-├── site.webmanifest     # PWA-lite install metadata
-├── og-image.png         # Social / Open Graph preview
-├── vercel.json          # Headers, cache, /play rewrite
+├── index.html              # App shell + meta (Vite entry)
+├── src/
+│   ├── main.js             # Boot
+│   ├── styles/
+│   │   ├── fonts.css       # Self-hosted @font-face
+│   │   └── game.css        # UI + overlay styles
+│   └── game/
+│       ├── config.js       # Constants (colors, lengths, power-ups)
+│       ├── color.js        # Color helpers
+│       ├── palette.js      # Sprite palette roles
+│       ├── characters.js   # Racer sprites ← edit to add characters
+│       ├── scenes.js       # Scenes & time-of-day ← edit to add scenes
+│       └── engine.js       # Canvas, race sim, UI, main loop
+├── public/
+│   ├── fonts/              # WOFF2 font files
+│   ├── favicon.svg
+│   ├── og-image.png
+│   └── site.webmanifest
 ├── docs/
-│   ├── README.md        # Documentation index
-│   ├── deployment.md    # Vercel & domains
-│   ├── game-rules.md    # Drinking rules & variants
-│   └── extending.md     # Add characters & scenes
-├── README.md
-└── LICENSE
+├── vite.config.js
+├── package.json
+└── vercel.json
 ```
 
 ## 🎮 How to Play
@@ -129,7 +139,8 @@ Expand **How to play & power-ups** in the lobby for the in-game rule card.
 
 ## 🔐 Privacy & Security
 
-- **No accounts**, analytics, or network calls during gameplay (except optional Google Fonts CDN).
+- **No accounts**, analytics, or network calls during gameplay.
+- **Self-hosted fonts** — no Google Fonts CDN at runtime.
 - **No data persistence** — refresh the page to reset the lobby.
 - Security headers configured in `vercel.json`.
 
@@ -137,7 +148,7 @@ Expand **How to play & power-ups** in the lobby for the in-game rule card.
 
 Contributions are welcome.
 
-1. Keep the game in **`index.html`** unless there is a strong reason to split assets.
+1. Keep changes in **`src/game/`** — run `npm run dev` to verify.
 2. Preserve the pixel-art aesthetic and mobile-first layout.
 3. Test on both desktop and a phone-sized viewport before opening a PR.
 4. Update **docs** when you change rules or extension APIs.
@@ -152,7 +163,7 @@ Contributions are welcome.
 
 ## 🙏 Acknowledgments
 
-- **Press Start 2P** & **Jersey 10** via Google Fonts
+- **Press Start 2P** & **Jersey 10** (self-hosted WOFF2)
 - Classic party-game energy from the Rixouu drinking-game collection ([split-the-g](https://github.com/Rixouu/split-the-g), [split-the-g-mobile](https://github.com/Rixouu/split-the-g-mobile), and friends)
 
 ---
