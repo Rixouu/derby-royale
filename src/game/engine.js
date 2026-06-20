@@ -768,7 +768,6 @@ function bindUi(){
     players.push({name:'',colorIdx:freeColor(),charIdx:players.length%CHAR_COUNT}); renderLobby();
     const inputs=listEl.querySelectorAll('input'); if(inputs.length)inputs[inputs.length-1].focus(); });
 
-  wireSeg('sceneSeg',function(){return sceneIdx;},function(i){sceneIdx=i; starField=null;});
   wireSeg('themeSeg',function(){return themeIdx;},function(i){themeIdx=i; starField=null;});
   wireSeg('lengthSeg',function(){return lengthIdx;},function(i){lengthIdx=i; START_X=LENGTHS[i].start; FINISH_X=LENGTHS[i].finish;});
   document.getElementById('powerToggle').addEventListener('change',function(e){ powerUpsOn=e.target.checked; });
