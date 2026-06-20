@@ -622,7 +622,7 @@ function viewUnits(){
    ============================================================ */
 let lobbyEl, listEl, addBtn, startBtn, hudEl, hudRows, countWrap, countNum, resultsEl, eventToast, finishFlash, photoTag;
 
-function startRace(){ resultsShown=false; setSlowmo(false); buildRacers(); spawnPowerups();
+function startRace(){ setSlowmo(false); buildRacers(); spawnPowerups();
   lobbyEl.classList.add('hidden'); resultsEl.classList.add('hidden'); hudEl.classList.remove('hidden'); renderHUD();
   state='countdown'; camX=START_X-4; runCountdown(); }
 function runCountdown(){ countWrap.classList.remove('hidden'); const steps=['3','2','1','GO!']; var i=0;
@@ -643,7 +643,7 @@ function showResults(){ const total=racers.length, w=finishOrder[0];
     rowsEl.appendChild(row); });
   const slow=finishOrder.filter(function(r){return r.neverLedFlag;}), noteEl=document.getElementById('resNote');
   noteEl.innerHTML=slow.length?('<b>Slowpoke clause:</b> '+slow.map(function(r){return escapeHtml(displayName(r.p,r.i));}).join(', ')+' never led — +1 sip of shame.'):'Everyone led at some point — a civilised race. No shame sips today.';
-  setTimeout(function(){ resultsShown=true; resultsEl.classList.remove('hidden'); },800); }
+  setTimeout(function(){ resultsEl.classList.remove('hidden'); },800); }
 
 /* ---------- HUD ---------- */
 function renderHUD(){ const sorted=racers.slice().sort(function(a,b){ if(a.finished&&b.finished)return a.place-b.place; if(a.finished)return -1; if(b.finished)return 1; return b.x-a.x; });

@@ -108,5 +108,16 @@ const SCENES = [
     track: '#d46843',
     laneLine: '#fff8ea',
   }),
+  makeScene({
+    key: 'volcanic-racing',
+    name: 'Volcanic Racing',
+    pickerLabel: 'Volcano',
+    folder: 'volcanic-racing',
+    sky: ['#5f2d26', '#f2995a'],
+    ground: '#594239',
+    groundDark: '#31211d',
+    track: '#8b4334',
+    laneLine: '#ffe6c8',
+  }),
 ];
 export { SCENES };
