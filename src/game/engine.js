@@ -638,10 +638,23 @@ function viewUnits(){
    COUNTDOWN / RACE FLOW
    ============================================================ */
 let lobbyEl, listEl, addBtn, startBtn, restartBtn, hudEl, hudRows, countWrap, countNum, resultsEl, eventToast, finishFlash, photoTag;
+let lobbyTabBtns=[], lobbyPanels=[];
 
 function syncRestartButton(){
   if(!restartBtn) return;
   restartBtn.classList.toggle('hidden', state==='lobby');
+}
+function showLobbyTab(tab){
+  lobbyTabBtns.forEach(function(btn){
+    const active=btn.dataset.tab===tab;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+  lobbyPanels.forEach(function(panel){
+    const active=panel.dataset.panel===tab;
+    panel.classList.toggle('hidden', !active);
+    panel.classList.toggle('active', active);
+  });
 }
 function clearRaceTimers(){
   clearTimeout(countdownTimer); countdownTimer=0;
@@ -785,10 +798,15 @@ function bindUi(){
   eventToast=document.getElementById('eventToast');
   finishFlash=document.getElementById('finishFlash');
   photoTag=document.getElementById('photoTag');
+  lobbyTabBtns=Array.prototype.slice.call(document.querySelectorAll('.lobby-tab'));
+  lobbyPanels=Array.prototype.slice.call(document.querySelectorAll('.lobby-panel'));
 
   document.getElementById('againBtn').addEventListener('click',function(){ resultsEl.classList.add('hidden'); startRace(); });
   document.getElementById('editBtn').addEventListener('click',function(){ clearRaceTimers(); resultsEl.classList.add('hidden'); countWrap.classList.add('hidden'); state='lobby'; syncRestartButton(); hudEl.classList.add('hidden'); buildRacers(); renderLobby(); lobbyEl.classList.remove('hidden'); });
   restartBtn.addEventListener('click',function(){ if(state==='lobby')return; startRace(); });
+  lobbyTabBtns.forEach(function(btn){
+    btn.addEventListener('click',function(){ showLobbyTab(btn.dataset.tab); });
+  });
 
   addBtn.addEventListener('click',function(){ if(players.length>=MAX_PLAYERS)return;
     players.push({name:'',colorIdx:freeColor(),charIdx:players.length%CHAR_COUNT}); renderLobby();
@@ -799,6 +817,7 @@ function bindUi(){
   wireSeg('lengthSeg',function(){return lengthIdx;},function(i){lengthIdx=i; START_X=LENGTHS[i].start; FINISH_X=LENGTHS[i].finish;});
   document.getElementById('powerToggle').addEventListener('change',function(e){ powerUpsOn=e.target.checked; });
   startBtn.addEventListener('click',function(){ if(state!=='lobby')return; ac(); players.forEach(function(p,i){ p.name=displayName(p,i); }); startRace(); });
+  showLobbyTab('roster');
   syncRestartButton();
 }
 
