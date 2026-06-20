@@ -2,7 +2,7 @@
 
 **Derby Royale** is a browser drinking game built around a side-scrolling pixel-art race: pick your racers, cheer them to the finish line, and let the standings decide who sips.
 
-Everything runs in the **browser** — no backend, no accounts. Clone the repo and run **`pnpm dev`**, or play the live build on a phone or laptop. Add up to eight players and start the race.
+Everything runs in the **browser** — no backend, no accounts. Clone the repo and run **`pnpm dev`**, or play the live build on a phone or laptop. Add up to six players and start the race.
 
 **Play now:** [derby-royale.vercel.app](https://derby-royale.vercel.app/)
 
@@ -23,21 +23,23 @@ The game was built by [Jonathan Rycx](https://github.com/Rixouu), who leads prod
 
 ### 🌍 Scenes & atmosphere
 
-- **5 scenes**: Beach, Meadow, Snow, Desert, Volcano — each with unique sky, track, and pixel props.
-- **3 times of day**: Day, Sunset, Night (colour overlays on the scene).
+- **8 scene packs**: Race Track, Mountain Valley, Ancient Greek, Desert Grand Prix, Neo Tokyo, Space Colony, Tropical Island, Volcanic Racing.
+- Each scene uses a layered **background + track + crowd** art set for a more bespoke look.
 - **3 race lengths**: Sprint (quick), Classic (balanced), Marathon (epic).
 
 ### ⚡ Power-ups (optional)
 
 Toggle power-ups on or off before the race.
 
-| Icon | Power-up | Effect |
-|------|----------|--------|
-| Boost | Yellow | Burst of speed |
-| Star | White | Speed + immunity |
-| Banana | Gold | Drop a trap behind you |
-| Lightning | Blue | Slow racers ahead |
-| Bubble | Cyan | Block one hit |
+All pickups currently share the same `question-box` asset in `public/power/power-up.png`, while the gameplay effects stay distinct.
+
+| Power-up | Effect |
+|----------|--------|
+| Boost | Burst of speed |
+| Star | Speed + immunity |
+| Banana | Drop a trap behind you |
+| Lightning | Slow racers ahead |
+| Bubble | Block one hit |
 
 ### 🍻 Drinking rules
 
@@ -112,10 +114,12 @@ derby-royale/
 │       ├── color.js        # Color helpers
 │       ├── palette.js      # Sprite palette roles
 │       ├── characters.js   # Racer sprites ← edit to add characters
-│       ├── scenes.js       # Scenes & time-of-day ← edit to add scenes
+│       ├── scenes.js       # Scene registry ← edit to add scene packs
 │       └── engine.js       # Canvas, race sim, UI, main loop
 ├── public/
+│   ├── background/         # Scene packs (background, track, crowd)
 │   ├── fonts/              # WOFF2 font files
+│   ├── power/              # Shared power-up artwork
 │   ├── favicon.svg
 │   ├── og-image.png
 │   └── site.webmanifest
@@ -128,8 +132,8 @@ derby-royale/
 
 ## 🎮 How to Play
 
-1. **Add players** (up to 8) — tap colour to recolour, tap the racer sprite to cycle character.
-2. Choose **scene**, **time of day**, and **race length**.
+1. **Add players** (up to 6) — tap colour to recolour, tap the racer sprite to cycle character.
+2. Choose **scene** and **race length**.
 3. Toggle **power-ups** if you want chaos (or turn off for a pure sprint).
 4. Tap **START THE RACE** — countdown, then watch the HUD.
 5. **Results** show placement, sip counts, and optional party prompts — race again or edit settings.

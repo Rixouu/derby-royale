@@ -12,6 +12,7 @@ import { loadBackgroundLayers, defaultParallax } from './backgrounds.js';
 let view, ctx;
 let VW=0, VH=0, DPR=1;           // device pixel size
 let PXS=4;                        // pixels-per-art-pixel (scale); set on resize
+const POWERUP_ASSET_SRC='/power/power-up.png';
 function resize(){
   DPR=Math.min(window.devicePixelRatio||1,2);
   VW=window.innerWidth; VH=window.innerHeight;
@@ -25,6 +26,15 @@ function resize(){
 }
 
 let tabHidden=false;
+
+function loadImage(src) {
+  return new Promise(function(resolve, reject){
+    const img=new Image();
+    img.onload=function(){ resolve(img); };
+    img.onerror=function(){ reject(new Error('Failed to load image: '+src)); };
+    img.src=src;
+  });
+}
 
 let lengthIdx=1, sceneIdx=0, powerUpsOn=true;
 let START_X=LENGTHS[lengthIdx].start, FINISH_X=LENGTHS[lengthIdx].finish;
@@ -72,6 +82,7 @@ function laneCenterY(i,n){ const m=trackMetrics(n); return m.topPad + m.laneH*(i
    SCENE BACKGROUND
    ============================================================ */
 let backgroundImages={};
+let powerupImage=null;
 
 function sceneRacerYOffset(){
   const S=SCENES[sceneIdx];
@@ -150,21 +161,9 @@ function drawTexturedLaneBand(S, m, n){
 
   for(let i=0;i<n;i++){
     const y0=Math.round(m.topPad+m.laneH*i);
-    const y1=y0+m.laneH;
     const srcY=Math.round(laneSurfaceTop+sourceLaneH*i);
     const srcH=Math.max(1, Math.round(i===n-1 ? laneSurfaceBottom-srcY : sourceLaneH));
     ctx.drawImage(img, 0, srcY, img.width, srcH, 0, y0, VW, m.laneH);
-
-    if(i%2===0){
-      ctx.fillStyle='rgba(0,0,0,0.035)';
-      ctx.fillRect(0,y0,VW,m.laneH);
-    }
-
-    ctx.fillStyle='rgba(255,255,255,0.1)';
-    ctx.fillRect(0,y0,VW,Math.max(2,Math.round(m.laneH/18)));
-    ctx.fillStyle=S.laneLine;
-    ctx.fillRect(0,y0,VW,2);
-    if(i===n-1) ctx.fillRect(0,y1-2,VW,2);
   }
 
   if(bottomDestTop<VH){
@@ -241,9 +240,10 @@ function drawScene(n){
   });
   ctx.restore();
 
-  drawPixelGround(m.topPad-m.horizonH,m.topPad,S.ground,S.groundDark,S.laneLine);
-  if(S.trackTexture) drawTexturedLaneBand(S,m,n);
-  else {
+  if(S.trackTexture) {
+    drawTexturedLaneBand(S,m,n);
+  } else {
+    drawPixelGround(m.topPad-m.horizonH,m.topPad,S.ground,S.groundDark,S.laneLine);
     drawPixelLaneBand(S,m,n);
     drawPixelGround(m.topPad+m.bandH+2,VH,S.groundDark,S.track,S.laneLine);
   }
@@ -463,6 +463,22 @@ function updateRacers(dt){
 
 /** Pixel-art mystery crate — golden box with ? glyph and soft pulse. */
 function drawPowerupBox(cx, cy, bob, spin){
+  if(powerupImage){
+    const pulse=1+0.03*Math.sin(clockT*5+spin);
+    const size=Math.max(26, Math.round(PXS*8.5)*pulse);
+    const drawX=Math.round(cx-size/2);
+    const drawY=Math.round(cy-size/2+bob);
+
+    ctx.fillStyle='rgba(0,0,0,.22)';
+    ctx.beginPath();
+    ctx.ellipse(cx, drawY+size*0.92, size*0.34, Math.max(4,size*0.11), 0,0,7);
+    ctx.fill();
+
+    ctx.imageSmoothingEnabled=false;
+    ctx.drawImage(powerupImage, drawX, drawY, size, size);
+    return;
+  }
+
   const cell=Math.max(3,Math.round(PXS*0.72));
   const bx=Math.round(cx-cell*6.5);
   const by=Math.round(cy-cell*6.5+bob);
@@ -720,7 +736,7 @@ function renderLobby(){ listEl.innerHTML='';
       rm.addEventListener('click',function(){ players.splice(i,1); renderLobby(); }); row.appendChild(rm); }
     listEl.appendChild(row);
   });
-  addBtn.textContent=players.length>=MAX_PLAYERS?'ROSTER FULL (8)':('+ ADD PLAYER  ·  '+players.length+'/'+MAX_PLAYERS);
+  addBtn.textContent=players.length>=MAX_PLAYERS?('ROSTER FULL ('+MAX_PLAYERS+')'):('+ ADD PLAYER  ·  '+players.length+'/'+MAX_PLAYERS);
   addBtn.disabled=players.length>=MAX_PLAYERS; addBtn.style.opacity=addBtn.disabled?0.5:1;
 }
 
@@ -811,9 +827,10 @@ function frame(now){
 }
 
 export async function bootGame() {
-  [sheetImages, backgroundImages]=await Promise.all([
+  [sheetImages, backgroundImages, powerupImage]=await Promise.all([
     loadSpriteSheets(CHARACTERS),
     loadBackgroundLayers(SCENES),
+    loadImage(POWERUP_ASSET_SRC),
   ]);
   bindUi();
   renderLobby();

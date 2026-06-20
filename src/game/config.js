@@ -1,6 +1,6 @@
 export const GW = 18;
 export const GH = 22;
-export const MAX_PLAYERS = 8;
+export const MAX_PLAYERS = 6;
 export const FUN_NAMES = ['Blaze','Turbo','Shadow','Nugget','Bubbles','Rocket','Ace','Zoomy'];
 export const COLORS = ['#ff3b3b','#ff8a1e','#ffd21e','#34d058','#1ec8e6','#3b6bff','#9b4dff','#ff5fa2'];
 export const LENGTHS = [
