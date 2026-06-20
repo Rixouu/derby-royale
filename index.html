@@ -2,10 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Derby Royale — the drinking game</title>
 <meta name="description" content="Pixel-art browser drinking game for up to 8 players. Pick racers, race to the finish, and let the standings decide who sips.">
-<meta name="theme-color" content="#f5e6c4">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://derby-royale.vercel.app/">
 <meta property="og:title" content="Derby Royale — the drinking game">
@@ -37,8 +36,8 @@
     <div class="hint">Tap the <b>colour</b> to recolour · tap the <b>racer</b> to change</div>
     <button id="addBtn" class="btn btn-ghost" type="button">+ ADD PLAYER</button>
     <div class="settings">
-      <div class="ctrl"><div class="ctrl-label">Time of day</div>
-        <div class="seg" id="themeSeg"><button type="button" data-i="0">Day</button><button type="button" data-i="1">Sunset</button><button type="button" data-i="2">Night</button></div>
+      <div class="ctrl"><div class="ctrl-label">Scene</div>
+        <div class="seg scene-grid" id="sceneSeg"></div>
       </div>
       <div class="ctrl"><div class="ctrl-label">Race length</div>
         <div class="seg" id="lengthSeg"><button type="button" data-i="0">Sprint<span class="sub">quick</span></button><button type="button" data-i="1">Classic<span class="sub">balanced</span></button><button type="button" data-i="2">Marathon<span class="sub">epic</span></button></div>
@@ -52,11 +51,11 @@
       <div class="rules">Pick a racer, choose a colour, name them — then cheer them to the finish.<br><br>
         <b>Winner</b> hands out sips equal to the number of players. Everyone else drinks their finishing place; <b>last place</b> gets one extra. <b>Slowpoke clause:</b> never led the race → +1 sip of shame.</div>
       <div class="pw-legend">
-        <span><i style="background:#ffd21e"></i> Boost — burst of speed</span>
-        <span><i style="background:#fff"></i> Star — speed + immunity</span>
-        <span><i style="background:#ffe14d"></i> Banana — drop a trap</span>
-        <span><i style="background:#7df"></i> Lightning — slow those ahead</span>
-        <span><i style="background:#9fe8ff"></i> Bubble — block one hit</span>
+        <span><i class="pw-boost"></i> Boost — burst of speed</span>
+        <span><i class="pw-star"></i> Star — speed + immunity</span>
+        <span><i class="pw-banana"></i> Banana — drop a trap</span>
+        <span><i class="pw-lightning"></i> Lightning — slow those ahead</span>
+        <span><i class="pw-bubble"></i> Bubble — block one hit</span>
       </div>
     </details>
     <div class="footnote">Drink responsibly — water is also a drink 18+</div>

@@ -55,9 +55,10 @@
   .ctrl{display:flex;flex-direction:column;gap:6px}
   .ctrl-label{font-family:'Press Start 2P',monospace;font-size:9px;letter-spacing:1px;color:var(--acc);text-transform:uppercase}
   .seg{display:flex;gap:6px}
+  .scene-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:6px}
   .seg button{flex:1;border:3px solid var(--line);cursor:pointer;font-family:'Jersey 10',monospace;
     font-size:20px;color:var(--ink);background:var(--panel2);padding:8px 2px;line-height:1;transition:transform .05s}
-  .seg.icons button{font-size:22px;padding:7px 2px}
+  .scene-grid button{font-size:18px;padding:10px 6px;min-height:44px}
   .seg button .sub{display:block;font-size:13px;color:var(--dim);margin-top:1px}
   .seg button:active{transform:translate(1px,1px)}
   .seg button.active{background:var(--acc);color:#fff; border-color:var(--line);box-shadow:inset -3px -3px 0 rgba(61,48,24,.18)}
@@ -75,6 +76,11 @@
   .pw-legend{display:flex;flex-direction:column;gap:4px;font-size:18px;color:var(--ink);padding:8px 2px 0}
   .pw-legend span{display:flex;align-items:center;gap:7px}
   .pw-legend i{width:14px;height:14px;border:2px solid var(--line);flex:0 0 auto}
+  .pw-boost{background:#ffd21e}
+  .pw-star{background:#fff}
+  .pw-banana{background:#ffe14d}
+  .pw-lightning{background:#7df}
+  .pw-bubble{background:#9fe8ff}
   .footnote{margin-top:12px;text-align:center;font-size:15px;color:var(--dim)}
   /* ---------- HUD ---------- */
   #hud{position:fixed;top:10px;right:10px;z-index:9;pointer-events:none;background:var(--panel);

@@ -1,32 +1,112 @@
+const TRACK_TEXTURE_SLICES = {
+  laneSurfaceTop: 0,
+  laneSurfaceBottom: 0.74,
+  lowerApronTop: 0.69,
+};
+
+const COMMON_SCENE = {
+  skyRatio: 0.4,
+  botRatio: 0.16,
+  minBottomPad: 120,
+  overlayFrontOffsetY: -28,
+  racerYOffset: -54,
+};
+
+function makeScene(config) {
+  return {
+    key: config.key,
+    name: config.name,
+    pickerLabel: config.pickerLabel,
+    sky: config.sky,
+    backdrop: '/background/' + config.folder + '/01-background.png',
+    trackTexture: '/background/' + config.folder + '/02-track.png',
+    overlayFront: '/background/' + config.folder + '/03-crowd-front.png',
+    trackTextureSlices: { ...TRACK_TEXTURE_SLICES },
+    ...COMMON_SCENE,
+    ground: config.ground,
+    groundDark: config.groundDark,
+    track: config.track,
+    laneLine: config.laneLine,
+  };
+}
+
 const SCENES = [
-  {
+  makeScene({
     key: 'racetrack',
     name: 'Racetrack',
+    pickerLabel: 'Track',
+    folder: 'race-track',
     sky: ['#4da8ef', '#8bd0ff'],
-    backdrop: '/background/racetrack/01-background.png',
-    trackTexture: '/background/racetrack/02-track.png',
-    overlayFront: '/background/racetrack/03-crowd-front.png',
-    trackTextureSlices: {
-      laneSurfaceTop: 0,
-      laneSurfaceBottom: 0.74,
-      lowerApronTop: 0.69,
-    },
-    skyRatio: 0.4,
-    botRatio: 0.16,
-    minBottomPad: 120,
-    overlayFrontOffsetY: 34,
-    racerYOffset: -54,
     ground: '#5d9827',
     groundDark: '#3d6f19',
     track: '#cf523d',
     laneLine: '#fff7ee',
-  },
+  }),
+  makeScene({
+    key: 'mountain',
+    name: 'Mountain',
+    pickerLabel: 'Mountain',
+    folder: 'mountain-valley',
+    sky: ['#4c95db', '#b9e3ff'],
+    ground: '#5f9034',
+    groundDark: '#436723',
+    track: '#345f9d',
+    laneLine: '#eff6ff',
+  }),
+  makeScene({
+    key: 'ancient-greek',
+    name: 'Ancient Greek',
+    pickerLabel: 'Greek',
+    folder: 'ancient-greek',
+    sky: ['#89c5e0', '#f7f0d9'],
+    ground: '#98a45f',
+    groundDark: '#6c7640',
+    track: '#c17b4b',
+    laneLine: '#fff4db',
+  }),
+  makeScene({
+    key: 'desert-grand-prix',
+    name: 'Desert Grand Prix',
+    pickerLabel: 'Desert',
+    folder: 'desert-grand-prix',
+    sky: ['#f7bf6c', '#ffe6ad'],
+    ground: '#c7a15a',
+    groundDark: '#8f6a34',
+    track: '#cf8050',
+    laneLine: '#fff0d7',
+  }),
+  makeScene({
+    key: 'neo-tokyo',
+    name: 'Neo Tokyo',
+    pickerLabel: 'Tokyo',
+    folder: 'neo-tokyo',
+    sky: ['#35569a', '#c2cbff'],
+    ground: '#43627b',
+    groundDark: '#243446',
+    track: '#5979b8',
+    laneLine: '#eef4ff',
+  }),
+  makeScene({
+    key: 'space-colony',
+    name: 'Space Colony',
+    pickerLabel: 'Space',
+    folder: 'space-colony',
+    sky: ['#19284c', '#6e8fc0'],
+    ground: '#57677b',
+    groundDark: '#303846',
+    track: '#7b889d',
+    laneLine: '#f5fbff',
+  }),
+  makeScene({
+    key: 'tropical-island',
+    name: 'Tropical Island',
+    pickerLabel: 'Island',
+    folder: 'tropical-island',
+    sky: ['#4eb8ed', '#cff8ff'],
+    ground: '#4ba35a',
+    groundDark: '#2d6d39',
+    track: '#d46843',
+    laneLine: '#fff8ea',
+  }),
 ];
-
-const THEMES = [
-  { key: 'day', overlay: 'rgba(255,240,200,0)', star: false },
-  { key: 'sunset', overlay: 'rgba(255,120,60,0.18)', sky: ['#f2784b', '#ffd089'], star: false },
-  { key: 'night', overlay: 'rgba(20,20,60,0.42)', sky: ['#0a1838', '#243a63'], star: true },
-];
-
-export { SCENES, THEMES };
+export { SCENES };

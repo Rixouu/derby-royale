@@ -5,7 +5,7 @@ import {
 import { rnd } from './color.js';
 import { CHARACTERS, CHAR_COUNT } from './characters.js';
 import { loadSpriteSheets, frameCountFor, idleFrameFor, spriteScreenSize } from './sprite-sheets.js';
-import { SCENES, THEMES } from './scenes.js';
+import { SCENES } from './scenes.js';
 import { loadBackgroundLayers, defaultParallax } from './backgrounds.js';
 
 /* ---------- low-res pixel canvas ---------- */
@@ -26,7 +26,7 @@ function resize(){
 
 let tabHidden=false;
 
-let lengthIdx=1, themeIdx=0, sceneIdx=0, powerUpsOn=true;
+let lengthIdx=1, sceneIdx=0, powerUpsOn=true;
 let START_X=LENGTHS[lengthIdx].start, FINISH_X=LENGTHS[lengthIdx].finish;
 
 let trackMetricsCache=null, trackMetricsCacheN=-1, trackMetricsCacheScene=-1;
@@ -71,7 +71,6 @@ function laneCenterY(i,n){ const m=trackMetrics(n); return m.topPad + m.laneH*(i
 /* ============================================================
    SCENE BACKGROUND
    ============================================================ */
-let starField=null;
 let backgroundImages={};
 
 function sceneRacerYOffset(){
@@ -219,18 +218,14 @@ function drawPixelLaneBand(S,m,n){
   ctx.fillStyle=S.laneLine; ctx.fillRect(0,Math.round(m.topPad+m.bandH),VW,2);
 }
 
-function ensureStars(){
-  if(starField) return;
-  starField=[]; for(let i=0;i<70;i++) starField.push({x:Math.random(),y:Math.random()*0.5,t:Math.random()*6});
-}
 function drawVerticalGradient(x0,y0,w,h,top,bot){
   const grd=ctx.createLinearGradient(0,y0,0,y0+h); grd.addColorStop(0,top); grd.addColorStop(1,bot);
   ctx.fillStyle=grd; ctx.fillRect(x0,y0,w,h);
 }
-function drawScene(n,timeT){
-  const S=SCENES[sceneIdx], T=THEMES[themeIdx];
+function drawScene(n){
+  const S=SCENES[sceneIdx];
   const m=trackMetrics(n);
-  const sky=(T.sky||S.sky);
+  const sky=S.sky;
   const layers=S.layers||[];
   const backLayers=[], frontLayers=[];
   layers.forEach(function(layer){ (layer.front? frontLayers : backLayers).push(layer); });
@@ -246,10 +241,6 @@ function drawScene(n,timeT){
   });
   ctx.restore();
 
-  if(T.star){ ensureStars(); ctx.fillStyle='#fff';
-    starField.forEach(function(s){ var a=0.5+0.5*Math.sin(timeT*1.5+s.t); ctx.globalAlpha=a*0.9;
-      ctx.fillRect(Math.floor(s.x*VW), Math.floor(s.y*m.skyBottom*0.82), 2,2); }); ctx.globalAlpha=1; }
-
   drawPixelGround(m.topPad-m.horizonH,m.topPad,S.ground,S.groundDark,S.laneLine);
   if(S.trackTexture) drawTexturedLaneBand(S,m,n);
   else {
@@ -264,9 +255,7 @@ function drawScene(n,timeT){
     drawFrontParallaxLayer(backgroundImages[layer.src], par, m.topPad, bgScale);
   });
 
-  if(T.overlay && T.overlay.indexOf(',0)')<0){ ctx.fillStyle=T.overlay; ctx.fillRect(0,0,VW,VH); }
-
-  drawStartFinish(n,m);
+  drawStartFinish(m);
 }
 
 function drawSceneOverlay(){
@@ -274,7 +263,7 @@ function drawSceneOverlay(){
   if(S.overlayFront && backgroundImages[S.overlayFront]) drawBottomOverlay(backgroundImages[S.overlayFront], S.overlayFrontOffsetY);
 }
 
-function drawStartFinish(n,m){
+function drawStartFinish(m){
   const top=m.topPad, h=m.bandH;
   // start line (left)
   var sx=worldToScreenX(START_X);
@@ -314,8 +303,6 @@ function getSprite(charIdx,color,frame){
   CHARACTERS[charIdx].draw(g,frame,color);
   spriteCache[key]=cv; return cv;
 }
-function clearSpriteCache(){ for(const k in spriteCache) delete spriteCache[k]; }
-
 /* draw a cached sprite centered at screen (cx,cyBaseline), scaled to pixel size p */
 function blitSprite(charIdx,color,frame,cx,cyBaseline,p,flash){
   const ch=CHARACTERS[charIdx];
@@ -352,12 +339,11 @@ let players=[
 ];
 let racers=[], finishOrder=[];
 let raceStartT=0, winnerCrossRealT=0, allDoneT=0, forceEndT=0;
-let resultsShown=false;
 let powerups=[], bananas=[], nextEventT=0, lastEventIdx=-1;
 
 /* ---------- audio (same approach as before) ---------- */
 let audioCtx=null, muted=false;
-function ac(){ if(!audioCtx){ const A=window.AudioContext||window.webkitAudioContext; if(A)audioCtx=new A(); } return audioCtx; }
+function ac(){ if(!audioCtx){ const A=window.AudioContext||window['webkitAudioContext']; if(A)audioCtx=new A(); } return audioCtx; }
 function tone(freq,delay,dur,type,vol){ if(muted)return; const c=ac(); if(!c)return; const t0=c.currentTime+delay;
   const o=c.createOscillator(),g=c.createGain(); o.type=type||'square'; o.frequency.value=freq;
   g.gain.setValueAtTime(0.0001,t0); g.gain.linearRampToValueAtTime(vol||0.12,t0+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
@@ -553,7 +539,7 @@ function drawRacersAndItems(n){
   });
 
   // racers — draw far lane (top) first for correct overlap
-  var order=racers.map(function(r,idx){return idx;}).sort(function(a,b){return racers[a].i-racers[b].i;});
+  var order=racers.map(function(_,idx){return idx;}).sort(function(a,b){return racers[a].i-racers[b].i;});
   order.forEach(function(idx){
     var r=racers[idx]; var sx=worldToScreenX(r.x);
     var cy=laneCenterY(r.i,n)+sceneRacerYOffset();
@@ -579,11 +565,11 @@ function drawRacersAndItems(n){
       ctx.fillStyle=r.fxColor||'#fff'; ctx.font='bold '+Math.round(p*5)+'px "Press Start 2P",monospace'; ctx.textAlign='center';
       ctx.fillText(r.fxText||'', sx, baseline-sz.h - age*22); ctx.globalAlpha=1; ctx.textAlign='left'; }
     // name label (HTML-free, drawn on canvas) above racer
-    drawNameLabel(displayName(r.p,r.i), COLORS[r.p.colorIdx], sx, baseline-sz.h-8, r.i, n);
+    drawNameLabel(displayName(r.p,r.i), COLORS[r.p.colorIdx], sx, baseline-sz.h-8, r.i);
   });
 }
 
-function drawNameLabel(name,color,cx,cy,laneI,n){
+function drawNameLabel(name,color,cx,cy,laneI){
   ctx.font='600 '+Math.max(11,Math.round(PXS*3.4))+'px "Jersey 10",monospace'; ctx.textBaseline='middle';
   var tw=ctx.measureText(name).width;
   var padX=6, dot=Math.max(6,PXS*1.8), gap=4;
@@ -605,7 +591,6 @@ function drawNameLabel(name,color,cx,cy,laneI,n){
    CAMERA (horizontal scroll, follow the pack)
    ============================================================ */
 function updateCamera(dt){
-  const n=Math.max(players.length,1);
   // visible world width:
   pxPerUnit = VW / viewUnits();
   var targetCamX;
@@ -700,10 +685,22 @@ function drawPickPreview(canvas,charIdx,color){
     if(img) cx.drawImage(img,0,0,fw,fh,0,0,canvas.width,canvas.height);
     return;
   }
-  const cell=3, pad=1; canvas.width=GW*cell; canvas.height=GH*cell;
+  const cell=3; canvas.width=GW*cell; canvas.height=GH*cell;
   const cx=canvas.getContext('2d'); cx.imageSmoothingEnabled=false; cx.clearRect(0,0,canvas.width,canvas.height);
   function g(x,y,w,h,c){ cx.fillStyle=c; cx.fillRect(x*cell,y*cell,w*cell,h*cell); }
   ch.draw(g,0,color);
+}
+function renderSceneSeg(){
+  const seg=document.getElementById('sceneSeg');
+  seg.innerHTML='';
+  SCENES.forEach(function(scene, idx){
+    const button=document.createElement('button');
+    button.type='button';
+    button.dataset.i=String(idx);
+    button.title=scene.name;
+    button.textContent=scene.pickerLabel || scene.name;
+    seg.appendChild(button);
+  });
 }
 function freeColor(){ const used=players.map(function(p){return p.colorIdx;}); for(let i=0;i<COLORS.length;i++) if(used.indexOf(i)<0)return i; return Math.floor(Math.random()*COLORS.length); }
 function nextFreeColor(from){ const used=players.map(function(p){return p.colorIdx;}); for(let k=1;k<=COLORS.length;k++){ const i=(from+k)%COLORS.length; if(used.indexOf(i)<0)return i; } return (from+1)%COLORS.length; }
@@ -768,7 +765,8 @@ function bindUi(){
     players.push({name:'',colorIdx:freeColor(),charIdx:players.length%CHAR_COUNT}); renderLobby();
     const inputs=listEl.querySelectorAll('input'); if(inputs.length)inputs[inputs.length-1].focus(); });
 
-  wireSeg('themeSeg',function(){return themeIdx;},function(i){themeIdx=i; starField=null;});
+  renderSceneSeg();
+  wireSeg('sceneSeg',function(){return sceneIdx;},function(i){sceneIdx=i; invalidateTrackMetrics();});
   wireSeg('lengthSeg',function(){return lengthIdx;},function(i){lengthIdx=i; START_X=LENGTHS[i].start; FINISH_X=LENGTHS[i].finish;});
   document.getElementById('powerToggle').addEventListener('change',function(e){ powerUpsOn=e.target.checked; });
   startBtn.addEventListener('click',function(){ if(state!=='lobby')return; ac(); players.forEach(function(p,i){ p.name=displayName(p,i); }); startRace(); });
@@ -803,7 +801,7 @@ function frame(now){
   // render
   const n=Math.max(players.length,1);
   ctx.clearRect(0,0,VW,VH);
-  drawScene(n,clockT);
+  drawScene(n);
   drawRacersAndItems(n);
   drawSceneOverlay();
 
