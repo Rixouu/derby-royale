@@ -340,6 +340,7 @@ let players=[
 let racers=[], finishOrder=[];
 let raceStartT=0, winnerCrossRealT=0, allDoneT=0, forceEndT=0;
 let powerups=[], bananas=[], nextEventT=0, lastEventIdx=-1;
+let countdownTimer=0, raceStartTimer=0, resultsTimer=0;
 
 /* ---------- audio (same approach as before) ---------- */
 let audioCtx=null, muted=false;
@@ -636,17 +637,27 @@ function viewUnits(){
 /* ============================================================
    COUNTDOWN / RACE FLOW
    ============================================================ */
-let lobbyEl, listEl, addBtn, startBtn, hudEl, hudRows, countWrap, countNum, resultsEl, eventToast, finishFlash, photoTag;
+let lobbyEl, listEl, addBtn, startBtn, restartBtn, hudEl, hudRows, countWrap, countNum, resultsEl, eventToast, finishFlash, photoTag;
 
-function startRace(){ setSlowmo(false); buildRacers(); spawnPowerups();
-  lobbyEl.classList.add('hidden'); resultsEl.classList.add('hidden'); hudEl.classList.remove('hidden'); renderHUD();
-  state='countdown'; camX=START_X-4; runCountdown(); }
+function syncRestartButton(){
+  if(!restartBtn) return;
+  restartBtn.classList.toggle('hidden', state==='lobby');
+}
+function clearRaceTimers(){
+  clearTimeout(countdownTimer); countdownTimer=0;
+  clearTimeout(raceStartTimer); raceStartTimer=0;
+  clearTimeout(resultsTimer); resultsTimer=0;
+}
+function startRace(){ clearRaceTimers(); hideToast(); setSlowmo(false); buildRacers(); spawnPowerups();
+  lobbyEl.classList.add('hidden'); resultsEl.classList.add('hidden'); countWrap.classList.add('hidden'); hudEl.classList.remove('hidden'); renderHUD();
+  state='countdown'; syncRestartButton(); camX=START_X-4; winnerCrossRealT=0; allDoneT=0; forceEndT=0; nextEventT=0; runCountdown(); }
 function runCountdown(){ countWrap.classList.remove('hidden'); const steps=['3','2','1','GO!']; var i=0;
   (function step(){ countNum.textContent=steps[i]; countNum.style.animation='none'; void countNum.offsetWidth; countNum.style.animation='';
     if(i<3)sfxCount(); else sfxGo(); i++;
-    if(i<steps.length){ setTimeout(step,820); } else setTimeout(function(){ countWrap.classList.add('hidden'); state='racing'; raceStartT=clockT; forceEndT=0; nextEventT=realT+rnd(7,10); },600); })(); }
+    if(i<steps.length){ countdownTimer=setTimeout(step,820); }
+    else { raceStartTimer=setTimeout(function(){ countWrap.classList.add('hidden'); state='racing'; syncRestartButton(); raceStartT=clockT; forceEndT=0; nextEventT=realT+rnd(7,10); },600); } })(); }
 
-function endRace(){ state='finished'; hideToast(); showResults(); setTimeout(function(){ hudEl.classList.add('hidden'); },400); }
+function endRace(){ state='finished'; syncRestartButton(); hideToast(); showResults(); setTimeout(function(){ hudEl.classList.add('hidden'); },400); }
 
 function sipInfo(place,total){ if(place===1)return {txt:'deals '+total,cls:'give'}; if(place===total)return {txt:(total+1)+' · chug',cls:'chug'}; return {txt:place+' sips',cls:''}; }
 function escapeHtml(s){return (''+s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
@@ -659,7 +670,7 @@ function showResults(){ const total=racers.length, w=finishOrder[0];
     rowsEl.appendChild(row); });
   const slow=finishOrder.filter(function(r){return r.neverLedFlag;}), noteEl=document.getElementById('resNote');
   noteEl.innerHTML=slow.length?('<b>Slowpoke clause:</b> '+slow.map(function(r){return escapeHtml(displayName(r.p,r.i));}).join(', ')+' never led — +1 sip of shame.'):'Everyone led at some point — a civilised race. No shame sips today.';
-  setTimeout(function(){ resultsEl.classList.remove('hidden'); },800); }
+  resultsTimer=setTimeout(function(){ resultsEl.classList.remove('hidden'); },800); }
 
 /* ---------- HUD ---------- */
 function renderHUD(){ const sorted=racers.slice().sort(function(a,b){ if(a.finished&&b.finished)return a.place-b.place; if(a.finished)return -1; if(b.finished)return 1; return b.x-a.x; });
@@ -765,6 +776,7 @@ function bindUi(){
   listEl=document.getElementById('playerList');
   addBtn=document.getElementById('addBtn');
   startBtn=document.getElementById('startBtn');
+  restartBtn=document.getElementById('restartBtn');
   hudEl=document.getElementById('hud');
   hudRows=document.getElementById('hudRows');
   countWrap=document.getElementById('countWrap');
@@ -775,7 +787,8 @@ function bindUi(){
   photoTag=document.getElementById('photoTag');
 
   document.getElementById('againBtn').addEventListener('click',function(){ resultsEl.classList.add('hidden'); startRace(); });
-  document.getElementById('editBtn').addEventListener('click',function(){ resultsEl.classList.add('hidden'); state='lobby'; hudEl.classList.add('hidden'); buildRacers(); renderLobby(); lobbyEl.classList.remove('hidden'); });
+  document.getElementById('editBtn').addEventListener('click',function(){ clearRaceTimers(); resultsEl.classList.add('hidden'); countWrap.classList.add('hidden'); state='lobby'; syncRestartButton(); hudEl.classList.add('hidden'); buildRacers(); renderLobby(); lobbyEl.classList.remove('hidden'); });
+  restartBtn.addEventListener('click',function(){ if(state==='lobby')return; startRace(); });
 
   addBtn.addEventListener('click',function(){ if(players.length>=MAX_PLAYERS)return;
     players.push({name:'',colorIdx:freeColor(),charIdx:players.length%CHAR_COUNT}); renderLobby();
@@ -786,6 +799,7 @@ function bindUi(){
   wireSeg('lengthSeg',function(){return lengthIdx;},function(i){lengthIdx=i; START_X=LENGTHS[i].start; FINISH_X=LENGTHS[i].finish;});
   document.getElementById('powerToggle').addEventListener('change',function(e){ powerUpsOn=e.target.checked; });
   startBtn.addEventListener('click',function(){ if(state!=='lobby')return; ac(); players.forEach(function(p,i){ p.name=displayName(p,i); }); startRace(); });
+  syncRestartButton();
 }
 
 /* ============================================================
