@@ -153,6 +153,12 @@ let backgroundImages={};
 let powerupImage=null;
 let lobbySceneReveal=0;
 
+function syncCanvasVisibility(){
+  if(!view) return;
+  const shouldHideLobbyCanvas=state==='lobby' && !currentSceneArtReady();
+  view.style.opacity=shouldHideLobbyCanvas ? '0' : '1';
+}
+
 function currentSceneArtReady(){
   const S=SCENES[sceneIdx];
   return !!(S.backdrop && S.trackTexture && backgroundImages[S.backdrop] && backgroundImages[S.trackTexture]);
@@ -1022,6 +1028,8 @@ function wireSeg(id,getIdx,setIdx,onPaint){ const seg=document.getElementById(id
 function bindUi(){
   view=document.getElementById('game');
   ctx=view.getContext('2d');
+  view.style.transition='opacity 160ms ease-out';
+  view.style.opacity='0';
   window.addEventListener('resize',function(){ resize(); if(listEl&&state==='lobby') renderLobby(); });
   document.addEventListener('visibilitychange',function(){ tabHidden=document.hidden; });
   resize();
@@ -1151,6 +1159,7 @@ function frame(now){
   var dt=realDt*timeScale; clockT+=dt;
   const revealTarget=currentSceneArtReady() ? 1 : 0;
   lobbySceneReveal += (revealTarget-lobbySceneReveal)*Math.min(realDt*5,1);
+  syncCanvasVisibility();
 
   if(state==='racing'||state==='countdown') updateRacers(dt);
   updateCamera(realDt);
