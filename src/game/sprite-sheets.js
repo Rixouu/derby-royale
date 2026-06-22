@@ -36,9 +36,11 @@ export function idleFrameFor(char) {
 /** Screen size for a racer sprite at scale p (matches procedural GH*p height). */
 export function spriteScreenSize(char, p) {
   if (char.sheet) {
+    const renderFrameW = char.sheet.renderFrameW || char.sheet.frameW;
+    const renderFrameH = char.sheet.renderFrameH || char.sheet.frameH;
     const targetH = GH * p;
-    const scale = targetH / char.sheet.frameH;
-    return { w: char.sheet.frameW * scale, h: targetH, scale: scale };
+    const scale = targetH / renderFrameH;
+    return { w: renderFrameW * scale, h: targetH, scale: scale };
   }
   return { w: GW * p, h: GH * p, scale: 1 };
 }

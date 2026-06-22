@@ -31,6 +31,7 @@
   .lobby-panels{border:3px solid var(--line);background:rgba(234,217,176,.35);padding:10px 10px 8px;min-height:296px}
   .lobby-panel{min-width:0}
   .section-head{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
+  .mobile-hint,.scene-picker-toggle{display:none}
   /* ---------- player rows ---------- */
   #playerList{display:flex;flex-direction:column;gap:8px;margin:4px 0 8px}
   .player-row{display:flex;align-items:center;gap:8px;background:var(--panel2);border:3px solid var(--line);padding:6px 8px}
@@ -63,6 +64,12 @@
   .ctrl{display:flex;flex-direction:column;gap:6px}
   .ctrl-label{font-family:'Press Start 2P',monospace;font-size:9px;letter-spacing:1px;color:var(--acc);text-transform:uppercase}
   .seg{display:flex;gap:6px}
+  .scene-picker-toggle{width:100%;border:3px solid var(--line);background:var(--panel2);color:var(--ink);padding:10px 12px;
+    font-family:'Jersey 10',monospace;font-size:24px;line-height:1;cursor:pointer;text-align:left;
+    align-items:center;justify-content:space-between;gap:12px}
+  .scene-picker-toggle .meta{font-size:15px;color:var(--dim)}
+  .scene-picker-toggle .caret{width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-top:10px solid var(--ink);flex:0 0 auto}
+  .scene-picker-toggle[aria-expanded="true"] .caret{transform:rotate(180deg)}
   .scene-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
   .length-grid button{min-height:60px}
   .seg button{flex:1;border:3px solid var(--line);cursor:pointer;font-family:'Jersey 10',monospace;
@@ -142,9 +149,33 @@
     .lobby-tabs{grid-template-columns:1fr;gap:5px}
     .lobby-tab{font-size:8px;padding:9px 6px}
     .lobby-panels{padding:9px 8px 7px;min-height:0}
-    .scene-grid{display:flex;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
-    .scene-grid button{flex:0 0 104px}
+    .mobile-hint{display:block;font-size:15px;line-height:1.1;color:var(--dim)}
+    .scene-picker-toggle{display:flex}
+    .scene-grid{display:none;grid-template-columns:repeat(2,minmax(0,1fr))}
+    .scene-grid.open{display:grid}
+    .scene-grid button{min-height:54px;font-size:21px;padding:10px 6px}
     .length-grid button{min-height:54px}
+    #playerList{gap:10px}
+    .player-mobile-nav{display:grid;grid-template-columns:52px 1fr 52px;gap:6px}
+    .player-mobile-arrow,.player-mobile-summary,.player-mobile-slot{border:3px solid var(--line);background:var(--panel2);color:var(--ink);cursor:pointer}
+    .player-mobile-arrow{font-family:'Press Start 2P',monospace;font-size:10px;line-height:1;padding:0}
+    .player-mobile-summary{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;padding:8px 10px;text-align:left}
+    .player-mobile-summary-label{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--acc)}
+    .player-mobile-summary-name{font-size:23px;line-height:1;color:var(--ink)}
+    .player-mobile-tabs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}
+    .player-mobile-slot{border:3px solid var(--line);background:var(--panel2);color:var(--ink);cursor:pointer;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:7px 0}
+    .player-mobile-slot-dot{width:18px;height:18px;border:2px solid var(--line);display:block}
+    .player-mobile-slot-num{font-family:'Press Start 2P',monospace;font-size:9px;line-height:1}
+    .player-mobile-slot.active{background:var(--acc);color:#fff;box-shadow:inset -3px -3px 0 rgba(61,48,24,.18)}
+    .player-mobile-slot.active .player-mobile-slot-dot{border-color:#fff}
+    .player-row-mobile{display:flex;flex-direction:column;align-items:stretch;padding:10px;gap:10px}
+    .player-mobile-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .player-mobile-title{font-family:'Press Start 2P',monospace;font-size:10px;color:var(--acc)}
+    .player-mobile-controls{display:grid;grid-template-columns:48px 60px 1fr;gap:8px;align-items:center}
+    .player-row-mobile .swatch{width:48px;height:48px}
+    .player-row-mobile .pick{width:60px;height:48px}
+    .player-row-mobile input{min-height:48px;font-size:28px;padding:0 6px;background:var(--panel)}
     .toggle-row{padding:8px 10px}
     .toggle-row .tt{font-size:19px}
     .toggle-row .ts{font-size:14px}

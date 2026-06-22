@@ -43,6 +43,7 @@
         <div class="section-head">
           <div class="ctrl-label">Racers</div>
           <div class="hint">Tap the <b>colour</b> to recolour · tap the <b>racer</b> to change</div>
+          <div class="mobile-hint">Use the numbered slots below to edit each racer on mobile</div>
         </div>
         <div id="playerList"></div>
         <button id="addBtn" class="btn btn-ghost" type="button">+ ADD PLAYER</button>
@@ -50,6 +51,7 @@
       <section class="lobby-panel hidden" id="panel-setup" role="tabpanel" aria-labelledby="tab-setup" data-panel="setup">
         <div class="settings">
           <div class="ctrl"><div class="ctrl-label">Scene</div>
+            <button id="scenePickerToggle" class="scene-picker-toggle" type="button" aria-expanded="false" aria-label="Choose scene" title="Choose scene"></button>
             <div class="seg scene-grid" id="sceneSeg"></div>
           </div>
           <div class="ctrl"><div class="ctrl-label">Race length</div>

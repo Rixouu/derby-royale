@@ -13,6 +13,7 @@ let view, ctx;
 let VW=0, VH=0, DPR=1;           // device pixel size
 let PXS=4;                        // pixels-per-art-pixel (scale); set on resize
 const POWERUP_ASSET_SRC='/power/power-up.png';
+const POWERUP_IMAGE_BOUNDS={ srcX:246, srcY:243, srcW:604, srcH:543 };
 function resize(){
   DPR=Math.min(window.devicePixelRatio||1,2);
   VW=window.innerWidth; VH=window.innerHeight;
@@ -42,18 +43,79 @@ let START_X=LENGTHS[lengthIdx].start, FINISH_X=LENGTHS[lengthIdx].finish;
 let trackMetricsCache=null, trackMetricsCacheN=-1, trackMetricsCacheScene=-1;
 function invalidateTrackMetrics(){ trackMetricsCache=null; trackMetricsCacheN=-1; trackMetricsCacheScene=-1; }
 function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
+function isPortraitMobile(){ return VW<=700 && VH>VW; }
+function getTrackTextureSlices(S, img){
+  const slices=S.trackTextureSlices||{};
+  const laneSurfaceTop=Math.max(0, Math.floor(img.height*(slices.laneSurfaceTop||0)));
+  const laneSurfaceBottom=Math.min(img.height, Math.ceil(img.height*(slices.laneSurfaceBottom||0.72)));
+  const lowerApronTop=Math.max(laneSurfaceBottom, Math.floor(img.height*(slices.lowerApronTop||0.72)));
+  return { laneSurfaceTop, laneSurfaceBottom, lowerApronTop };
+}
+function getTrackApronRenderMetrics(S, img){
+  const sliceMetrics=getTrackTextureSlices(S, img);
+  const baseScale=VW/img.width;
+  const fullSrcH=Math.max(1, img.height-sliceMetrics.lowerApronTop);
+  const fullDestH=Math.max(1, Math.round(fullSrcH*baseScale));
+  if(!isPortraitMobile()){
+    return {
+      ...sliceMetrics,
+      srcY: sliceMetrics.lowerApronTop,
+      srcH: fullSrcH,
+      destH: fullDestH,
+    };
+  }
+
+  const cappedDestH=clamp(
+    Math.round(Math.min(VW*0.26, VH*0.12)),
+    88,
+    Math.min(fullDestH, 124)
+  );
+  const croppedSrcH=Math.max(1, Math.round(cappedDestH/baseScale));
+  return {
+    ...sliceMetrics,
+    srcY: Math.max(sliceMetrics.lowerApronTop, img.height-croppedSrcH),
+    srcH: croppedSrcH,
+    destH: cappedDestH,
+  };
+}
+function getVisualTrackLaneCount(n){
+  const S=SCENES[sceneIdx]||{};
+  if(isPortraitMobile() && S.trackTexture) return Math.max(n, S.mobileVisualLaneCount||6);
+  return n;
+}
+function laneSlotIndex(i, n){
+  const visualCount=getVisualTrackLaneCount(n);
+  if(visualCount<=n) return i;
+  return Math.round((visualCount-n)/2)+i;
+}
+function sceneTrackApronHeight(){
+  const S=SCENES[sceneIdx]||{};
+  const img=S.trackTexture ? backgroundImages[S.trackTexture] : null;
+  if(!img) return 0;
+  return getTrackApronRenderMetrics(S, img).destH;
+}
 function sceneTrackLayout(){
   const S=SCENES[sceneIdx]||{};
+  const mobilePortrait=isPortraitMobile();
+  const mobileMinBottomPad=Math.max(
+    S.minBottomPadMobile!=null ? S.minBottomPadMobile : Math.min(S.minBottomPad||0, 72),
+    mobilePortrait ? sceneTrackApronHeight() : 0
+  );
   return {
-    skyRatio:S.skyRatio!=null ? S.skyRatio : 0.44,
-    botRatio:S.botRatio!=null ? S.botRatio : 0.10,
-    minBottomPad:S.minBottomPad||0,
+    skyRatio: mobilePortrait
+      ? (S.skyRatioMobile!=null ? S.skyRatioMobile : (S.skyRatio!=null ? Math.max(0.26, S.skyRatio-0.08) : 0.34))
+      : (S.skyRatio!=null ? S.skyRatio : 0.44),
+    botRatio: mobilePortrait
+      ? (S.botRatioMobile!=null ? S.botRatioMobile : (S.botRatio!=null ? Math.max(0.04, S.botRatio-0.08) : 0.05))
+      : (S.botRatio!=null ? S.botRatio : 0.10),
+    minBottomPad: mobilePortrait ? mobileMinBottomPad : (S.minBottomPad||0),
   };
 }
 /* On-screen track geometry — compact pixel-art lanes, generous sky for parallax */
 function trackMetrics(n){
   if(trackMetricsCache && trackMetricsCacheN===n && trackMetricsCacheScene===sceneIdx) return trackMetricsCache;
   n=Math.max(n,1);
+  const visualLaneCount=getVisualTrackLaneCount(n);
   const layout=sceneTrackLayout();
   const skyRatio=layout.skyRatio;
   const botPadTarget=Math.max(Math.floor(VH*layout.botRatio), layout.minBottomPad);
@@ -61,14 +123,14 @@ function trackMetrics(n){
   const topPad=Math.floor(VH*skyRatio);
   const maxBandH=Math.max(Math.floor(VH*0.18), VH-topPad-botPadTarget);
   let laneH=idealLaneH;
-  let bandH=laneH*n;
+  let bandH=laneH*visualLaneCount;
   if(bandH>maxBandH){
-    laneH=Math.max(Math.floor(PXS*8),Math.floor(maxBandH/n));
-    bandH=laneH*n;
+    laneH=Math.max(Math.floor(PXS*8),Math.floor(maxBandH/visualLaneCount));
+    bandH=laneH*visualLaneCount;
   }
   const botPad=VH-topPad-bandH;
   const horizonH=Math.max(Math.round(PXS*2),10);
-  trackMetricsCache={topPad,botPad,bandH,laneH,horizonH,skyBottom:topPad+horizonH};
+  trackMetricsCache={topPad,botPad,bandH,laneH,horizonH,skyBottom:topPad+horizonH,visualLaneCount};
   trackMetricsCacheN=n;
   trackMetricsCacheScene=sceneIdx;
   return trackMetricsCache;
@@ -77,10 +139,10 @@ function trackMetrics(n){
 let camX=0;                                       // world x at left edge (in world units)
 let pxPerUnit=10;                                 // screen px per world unit (set per frame)
 function worldToScreenX(wx){ return (wx - camX)*pxPerUnit; }
-function laneCenterY(i,n){ const m=trackMetrics(n); return m.topPad + m.laneH*(i+0.5); }
+function laneCenterY(i,n){ const m=trackMetrics(n); return m.topPad + m.laneH*(laneSlotIndex(i,n)+0.5); }
 function laneBounds(i,n){
   const m=trackMetrics(n);
-  const top=m.topPad + m.laneH*i;
+  const top=m.topPad + m.laneH*laneSlotIndex(i,n);
   return { top: top, bottom: top + m.laneH };
 }
 
@@ -95,11 +157,24 @@ function sceneRacerYOffset(){
   return S && S.racerYOffset ? S.racerYOffset : 0;
 }
 
+function powerupBoxRenderSize(laneH){
+  const mobile=isPortraitMobile();
+  return Math.max(
+    mobile ? 30 : 32,
+    Math.round(
+      Math.min(
+        Math.max(laneH*(mobile ? 0.5 : 0.54), PXS*(mobile ? 7.2 : 7.8)),
+        PXS*(mobile ? 9.2 : 10.1)
+      )
+    )
+  );
+}
+
 function racerLayout(ch, laneI, n, popScale, bob){
   const m=trackMetrics(n);
   const lane=laneBounds(laneI,n);
-  const padTop=Math.max(3, Math.round(m.laneH*0.08));
-  const padBottom=Math.max(4, Math.round(m.laneH*0.10));
+  const padTop=Math.max(2, Math.round(m.laneH*0.04));
+  const padBottom=Math.max(3, Math.round(m.laneH*0.06));
   const fittedScale=Math.min(PXS, Math.max(1, (m.laneH-padTop-padBottom)/GH));
   const scale=fittedScale*popScale;
   const sz=spriteScreenSize(ch,scale);
@@ -196,23 +271,31 @@ function drawTexturedLaneBand(S, m, n){
     return;
   }
 
-  const slices=S.trackTextureSlices||{};
-  const laneSurfaceTop=Math.max(0, Math.floor(img.height*(slices.laneSurfaceTop||0)));
-  const laneSurfaceBottom=Math.min(img.height, Math.ceil(img.height*(slices.laneSurfaceBottom||0.72)));
-  const lowerApronTop=Math.max(laneSurfaceBottom, Math.floor(img.height*(slices.lowerApronTop||0.72)));
+  const apronMetrics=getTrackApronRenderMetrics(S, img);
+  const laneSurfaceTop=apronMetrics.laneSurfaceTop;
+  const laneSurfaceBottom=apronMetrics.laneSurfaceBottom;
   const laneSurfaceHeight=Math.max(1, laneSurfaceBottom-laneSurfaceTop);
   const bottomDestTop=Math.round(m.topPad+m.bandH);
-  const sourceLaneH=Math.max(1, laneSurfaceHeight/n);
+  const renderLaneCount=m.visualLaneCount||getVisualTrackLaneCount(n);
+  const sourceLaneH=Math.max(1, laneSurfaceHeight/renderLaneCount);
 
-  for(let i=0;i<n;i++){
+  for(let i=0;i<renderLaneCount;i++){
     const y0=Math.round(m.topPad+m.laneH*i);
     const srcY=Math.round(laneSurfaceTop+sourceLaneH*i);
-    const srcH=Math.max(1, Math.round(i===n-1 ? laneSurfaceBottom-srcY : sourceLaneH));
+    const srcH=Math.max(1, Math.round(i===renderLaneCount-1 ? laneSurfaceBottom-srcY : sourceLaneH));
     ctx.drawImage(img, 0, srcY, img.width, srcH, 0, y0, VW, m.laneH);
   }
 
   if(bottomDestTop<VH){
-    ctx.drawImage(img, 0, lowerApronTop, img.width, img.height-lowerApronTop, 0, bottomDestTop, VW, VH-bottomDestTop);
+    const apronDestTop=Math.max(bottomDestTop, VH-apronMetrics.destH);
+    const fillGapH=Math.max(0, apronDestTop-bottomDestTop);
+    if(fillGapH>0){
+      const baseScale=VW/img.width;
+      const fillSrcH=Math.max(1, Math.round(fillGapH/baseScale));
+      const fillSrcY=clamp(laneSurfaceBottom-fillSrcH, laneSurfaceTop, laneSurfaceBottom-1);
+      ctx.drawImage(img, 0, fillSrcY, img.width, laneSurfaceBottom-fillSrcY, 0, bottomDestTop, VW, fillGapH);
+    }
+    ctx.drawImage(img, 0, apronMetrics.srcY, img.width, apronMetrics.srcH, 0, apronDestTop, VW, VH-apronDestTop);
   }
 }
 
@@ -504,24 +587,36 @@ function updateRacers(dt){
 }
 
 /** Pixel-art mystery crate — golden box with ? glyph and soft pulse. */
-function drawPowerupBox(cx, cy, bob, spin){
+function drawPowerupBox(cx, cy, laneH, bob, spin){
   if(powerupImage){
     const pulse=1+0.03*Math.sin(clockT*5+spin);
-    const size=Math.max(26, Math.round(PXS*8.5)*pulse);
-    const drawX=Math.round(cx-size/2);
-    const drawY=Math.round(cy-size/2+bob);
+    const baseSize=powerupBoxRenderSize(laneH);
+    const drawW=Math.round(baseSize*pulse);
+    const drawH=Math.round(drawW*(POWERUP_IMAGE_BOUNDS.srcH/POWERUP_IMAGE_BOUNDS.srcW));
+    const drawX=Math.round(cx-drawW/2);
+    const drawY=Math.round(cy-drawH/2+bob*0.75);
 
     ctx.fillStyle='rgba(0,0,0,.22)';
     ctx.beginPath();
-    ctx.ellipse(cx, drawY+size*0.92, size*0.34, Math.max(4,size*0.11), 0,0,7);
+    ctx.ellipse(cx, drawY+drawH*0.9, drawW*0.26, Math.max(4,drawH*0.1), 0,0,7);
     ctx.fill();
 
     ctx.imageSmoothingEnabled=false;
-    ctx.drawImage(powerupImage, drawX, drawY, size, size);
+    ctx.drawImage(
+      powerupImage,
+      POWERUP_IMAGE_BOUNDS.srcX,
+      POWERUP_IMAGE_BOUNDS.srcY,
+      POWERUP_IMAGE_BOUNDS.srcW,
+      POWERUP_IMAGE_BOUNDS.srcH,
+      drawX,
+      drawY,
+      drawW,
+      drawH
+    );
     return;
   }
 
-  const cell=Math.max(3,Math.round(PXS*0.72));
+  const cell=Math.max(3,Math.round(powerupBoxRenderSize(laneH)/12));
   const bx=Math.round(cx-cell*6.5);
   const by=Math.round(cy-cell*6.5+bob);
   function px(dx,dy,w,h,col){
@@ -587,7 +682,7 @@ function drawRacersAndItems(n){
   if(powerUpsOn && (state==='racing'||state==='countdown')){
     powerups.forEach(function(b){ if(!b.alive)return; var sx=worldToScreenX(b.x); if(sx<-20||sx>VW+20)return;
       var cy=laneCenterY(b.lane,n); var bob=Math.sin(clockT*3+b.spin)*3;
-      drawPowerupBox(sx,cy,bob,b.spin);
+      drawPowerupBox(sx,cy,m.laneH,bob,b.spin);
     });
   }
   // bananas
@@ -682,6 +777,7 @@ function viewUnits(){
    ============================================================ */
 let lobbyEl, listEl, addBtn, startBtn, restartBtn, hudEl, hudRows, countWrap, countNum, resultsEl, eventToast, finishFlash, photoTag;
 let lobbyTabBtns=[], lobbyPanels=[];
+let mobileRosterIdx=0;
 
 function syncRestartButton(){
   if(!restartBtn) return;
@@ -775,6 +871,7 @@ function drawPickPreview(canvas,charIdx,color){
 }
 function renderSceneSeg(){
   const seg=document.getElementById('sceneSeg');
+  const toggle=document.getElementById('scenePickerToggle');
   seg.innerHTML='';
   SCENES.forEach(function(scene, idx){
     const button=document.createElement('button');
@@ -784,38 +881,100 @@ function renderSceneSeg(){
     button.textContent=scene.pickerLabel || scene.name;
     seg.appendChild(button);
   });
+  if(toggle){
+    const scene=SCENES[sceneIdx];
+    toggle.innerHTML='<span>'+(scene.name)+'</span><span class="meta">'+(sceneIdx+1)+' / '+SCENES.length+'</span><span class="caret" aria-hidden="true"></span>';
+  }
 }
 function freeColor(){ const used=players.map(function(p){return p.colorIdx;}); for(let i=0;i<COLORS.length;i++) if(used.indexOf(i)<0)return i; return Math.floor(Math.random()*COLORS.length); }
 function nextFreeColor(from){ const used=players.map(function(p){return p.colorIdx;}); for(let k=1;k<=COLORS.length;k++){ const i=(from+k)%COLORS.length; if(used.indexOf(i)<0)return i; } return (from+1)%COLORS.length; }
 
+function isCompactLobby(){ return window.matchMedia('(max-width:620px)').matches; }
+function setMobileRosterIdx(idx){
+  if(!players.length){ mobileRosterIdx=0; return; }
+  mobileRosterIdx=(idx+players.length)%players.length;
+}
+function removePlayerAt(idx){
+  players.splice(idx,1);
+  mobileRosterIdx=Math.max(0,Math.min(mobileRosterIdx,players.length-1));
+  renderLobby();
+}
+function makePlayerEditor(p,i,mobile){
+  const row=document.createElement('div'); row.className='player-row'+(mobile?' player-row-mobile':'');
+  const sw=document.createElement('div'); sw.className='swatch'; sw.style.background=COLORS[p.colorIdx]; sw.title='Colour';
+  const pick=document.createElement('button'); pick.className='pick'; pick.title='Change racer';
+  const pc=document.createElement('canvas'); pick.appendChild(pc); drawPickPreview(pc,p.charIdx,COLORS[p.colorIdx]);
+  sw.addEventListener('click',function(){ p.colorIdx=nextFreeColor(p.colorIdx); sw.style.background=COLORS[p.colorIdx]; drawPickPreview(pc,p.charIdx,COLORS[p.colorIdx]); });
+  pick.addEventListener('click',function(){ p.charIdx=(p.charIdx+1)%CHAR_COUNT; drawPickPreview(pc,p.charIdx,COLORS[p.colorIdx]); });
+  const input=document.createElement('input'); input.maxLength=14; input.placeholder=FUN_NAMES[i%FUN_NAMES.length]; input.value=p.name;
+  input.addEventListener('input',function(){ p.name=input.value; });
+  if(mobile){
+    const head=document.createElement('div'); head.className='player-mobile-head';
+    const title=document.createElement('div'); title.className='player-mobile-title'; title.textContent='Racer '+(i+1);
+    head.appendChild(title);
+    if(players.length>2){
+      const rm=document.createElement('button'); rm.className='remove'; rm.textContent='X'; rm.title='Remove';
+      rm.addEventListener('click',function(){ removePlayerAt(i); });
+      head.appendChild(rm);
+    }
+    const controls=document.createElement('div'); controls.className='player-mobile-controls';
+    controls.appendChild(sw); controls.appendChild(pick); controls.appendChild(input);
+    row.appendChild(head); row.appendChild(controls);
+    return row;
+  }
+  row.appendChild(sw); row.appendChild(pick); row.appendChild(input);
+  if(players.length>2){
+    const rm=document.createElement('button'); rm.className='remove'; rm.textContent='X'; rm.title='Remove';
+    rm.addEventListener('click',function(){ removePlayerAt(i); });
+    row.appendChild(rm);
+  }
+  return row;
+}
 function renderLobby(){ listEl.innerHTML='';
-  players.forEach(function(p,i){
-    const row=document.createElement('div'); row.className='player-row';
-    const sw=document.createElement('div'); sw.className='swatch'; sw.style.background=COLORS[p.colorIdx]; sw.title='Colour';
-    sw.addEventListener('click',function(){ p.colorIdx=nextFreeColor(p.colorIdx); sw.style.background=COLORS[p.colorIdx]; drawPickPreview(pc,p.charIdx,COLORS[p.colorIdx]); });
-    const pick=document.createElement('button'); pick.className='pick'; pick.title='Change racer';
-    const pc=document.createElement('canvas'); pick.appendChild(pc); drawPickPreview(pc,p.charIdx,COLORS[p.colorIdx]);
-    pick.addEventListener('click',function(){ p.charIdx=(p.charIdx+1)%CHAR_COUNT; drawPickPreview(pc,p.charIdx,COLORS[p.colorIdx]); });
-    const input=document.createElement('input'); input.maxLength=14; input.placeholder=FUN_NAMES[i%FUN_NAMES.length]; input.value=p.name;
-    input.addEventListener('input',function(){ p.name=input.value; });
-    row.appendChild(sw); row.appendChild(pick); row.appendChild(input);
-    if(players.length>2){ const rm=document.createElement('button'); rm.className='remove'; rm.textContent='X'; rm.title='Remove';
-      rm.addEventListener('click',function(){ players.splice(i,1); renderLobby(); }); row.appendChild(rm); }
-    listEl.appendChild(row);
-  });
+  if(isCompactLobby()){
+    setMobileRosterIdx(mobileRosterIdx);
+    const activePlayer=players[mobileRosterIdx];
+    const nav=document.createElement('div'); nav.className='player-mobile-nav';
+    const prev=document.createElement('button'); prev.type='button'; prev.className='player-mobile-arrow'; prev.textContent='<<'; prev.title='Previous racer';
+    prev.addEventListener('click',function(){ setMobileRosterIdx(mobileRosterIdx-1); renderLobby(); });
+    const summary=document.createElement('button'); summary.type='button'; summary.className='player-mobile-summary';
+    summary.innerHTML='<span class="player-mobile-summary-label">Racer '+(mobileRosterIdx+1)+' / '+players.length+'</span><span class="player-mobile-summary-name">'+escapeHtml(displayName(activePlayer,mobileRosterIdx))+'</span>';
+    const next=document.createElement('button'); next.type='button'; next.className='player-mobile-arrow'; next.textContent='>>'; next.title='Next racer';
+    next.addEventListener('click',function(){ setMobileRosterIdx(mobileRosterIdx+1); renderLobby(); });
+    nav.appendChild(prev); nav.appendChild(summary); nav.appendChild(next);
+    listEl.appendChild(nav);
+    const tabs=document.createElement('div'); tabs.className='player-mobile-tabs';
+    players.forEach(function(p,i){
+      const slot=document.createElement('button');
+      slot.type='button';
+      slot.className='player-mobile-slot'+(i===mobileRosterIdx?' active':'');
+      slot.innerHTML='<span class="player-mobile-slot-dot" style="background:'+COLORS[p.colorIdx]+'"></span><span class="player-mobile-slot-num">'+(i+1)+'</span>';
+      slot.title=displayName(p,i);
+      slot.addEventListener('click',function(){ mobileRosterIdx=i; renderLobby(); });
+      tabs.appendChild(slot);
+    });
+    listEl.appendChild(tabs);
+    listEl.appendChild(makePlayerEditor(activePlayer,mobileRosterIdx,true));
+  } else {
+    players.forEach(function(p,i){ listEl.appendChild(makePlayerEditor(p,i,false)); });
+  }
   addBtn.textContent=players.length>=MAX_PLAYERS?('ROSTER FULL ('+MAX_PLAYERS+')'):('+ ADD PLAYER  ·  '+players.length+'/'+MAX_PLAYERS);
   addBtn.disabled=players.length>=MAX_PLAYERS; addBtn.style.opacity=addBtn.disabled?0.5:1;
 }
 
-function wireSeg(id,getIdx,setIdx){ const seg=document.getElementById(id);
-  function paint(){ Array.prototype.forEach.call(seg.children,function(b){ b.classList.toggle('active',+b.dataset.i===getIdx()); }); }
+function wireSeg(id,getIdx,setIdx,onPaint){ const seg=document.getElementById(id);
+  function paint(){
+    const activeIdx=getIdx();
+    Array.prototype.forEach.call(seg.children,function(b){ b.classList.toggle('active',+b.dataset.i===activeIdx); });
+    if(onPaint) onPaint(activeIdx);
+  }
   seg.addEventListener('click',function(e){ const b=e.target.closest('button'); if(!b)return; setIdx(+b.dataset.i); paint(); }); paint(); return paint;
 }
 
 function bindUi(){
   view=document.getElementById('game');
   ctx=view.getContext('2d');
-  window.addEventListener('resize',resize);
+  window.addEventListener('resize',function(){ resize(); if(listEl&&state==='lobby') renderLobby(); });
   document.addEventListener('visibilitychange',function(){ tabHidden=document.hidden; });
   resize();
 
@@ -852,11 +1011,34 @@ function bindUi(){
   });
 
   addBtn.addEventListener('click',function(){ if(players.length>=MAX_PLAYERS)return;
-    players.push({name:'',colorIdx:freeColor(),charIdx:players.length%CHAR_COUNT}); renderLobby();
-    const inputs=listEl.querySelectorAll('input'); if(inputs.length)inputs[inputs.length-1].focus(); });
+    players.push({name:'',colorIdx:freeColor(),charIdx:players.length%CHAR_COUNT});
+    mobileRosterIdx=players.length-1;
+    renderLobby();
+    const inputs=listEl.querySelectorAll('input');
+    if(inputs.length){
+      const latest=inputs[inputs.length-1];
+      latest.focus();
+    }
+  });
 
   renderSceneSeg();
-  wireSeg('sceneSeg',function(){return sceneIdx;},function(i){sceneIdx=i; invalidateTrackMetrics();});
+  const sceneSeg=document.getElementById('sceneSeg');
+  const sceneToggle=document.getElementById('scenePickerToggle');
+  const paintScene=wireSeg('sceneSeg',function(){return sceneIdx;},function(i){sceneIdx=i; invalidateTrackMetrics();},function(activeIdx){
+    if(sceneToggle){
+      const scene=SCENES[activeIdx];
+      sceneToggle.innerHTML='<span>'+(scene.name)+'</span><span class="meta">'+(activeIdx+1)+' / '+SCENES.length+'</span><span class="caret" aria-hidden="true"></span>';
+      sceneSeg.classList.remove('open');
+      sceneToggle.setAttribute('aria-expanded','false');
+    }
+  });
+  if(sceneToggle){
+    sceneToggle.addEventListener('click',function(){
+      const open=!sceneSeg.classList.contains('open');
+      sceneSeg.classList.toggle('open', open);
+      sceneToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  }
   wireSeg('lengthSeg',function(){return lengthIdx;},function(i){lengthIdx=i; START_X=LENGTHS[i].start; FINISH_X=LENGTHS[i].finish;});
   document.getElementById('powerToggle').addEventListener('change',function(e){ powerUpsOn=e.target.checked; });
   startBtn.addEventListener('click',function(){ if(state!=='lobby')return; ac(); players.forEach(function(p,i){ p.name=displayName(p,i); }); startRace(); });

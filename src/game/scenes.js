@@ -6,9 +6,12 @@ const TRACK_TEXTURE_SLICES = {
 
 const COMMON_SCENE = {
   skyRatio: 0.4,
+  skyRatioMobile: 0.32,
   botRatio: 0.16,
+  botRatioMobile: 0.05,
   minBottomPad: 120,
-  racerYOffset: -54,
+  minBottomPadMobile: 72,
+  racerYOffset: 0,
 };
 
 function makeScene(config) {
