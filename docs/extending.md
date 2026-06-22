@@ -7,7 +7,7 @@ Comments in `characters.js` and `scenes.js` mark the main extension points.
 ## Architecture (quick map)
 
 | Symbol | Role |
-|--------|------|
+| ------ | ---- |
 | `CHARACTERS` | Racer sprites — PNG run sheets (`public/sprites/`) |
 | `COLORS` | Player colour swatches |
 | `SCENES` | Scene registry for background + track art |
@@ -20,13 +20,13 @@ All racers use **PNG sprite sheets**. See **[assets.md](./assets.md)** for how t
 ## Adding a character
 
 1. Add **`public/sprites/<key>/run.png`** (see [assets.md](./assets.md)).
-2. Add an entry to **`CHARACTERS`** in **`src/game/characters.js`**:
+1. Add an entry to **`CHARACTERS`** in **`src/game/characters.js`**:
 
 ```javascript
 { key: 'wizard', name: 'Wizard', kind: 'hero', sheet: { src: '/sprites/wizard/run.png', ...SHEET_RUN } },
 ```
 
-3. Refresh — the lobby picker cycles all `CHARACTERS` entries automatically.
+1. Refresh — the lobby picker cycles all `CHARACTERS` entries automatically.
 
 ### Critter vs hero
 
@@ -36,14 +36,14 @@ All racers use **PNG sprite sheets**. See **[assets.md](./assets.md)** for how t
 
 Scenes use **PNG background + track** art. See **[assets.md](./assets.md)** for asset sizes and folder layout.
 
-1. Add scene art under **`public/background/<key>/`**.
-2. Add an entry to **`SCENES`** in **`src/game/scenes.js`**:
+1. Add scene art under **`public/background/<scene-folder>/`**.
+1. Add an entry to **`SCENES`** in **`src/game/scenes.js`**:
 
 ```javascript
 {
-  key: 'city',
-  name: 'City',
-  folder: 'city',
+  key: 'sky-kingdom',
+  name: 'Sky Kingdom',
+  folder: '08-sky-kingdom',
   sky: ['#4da8ef', '#8bd0ff'],
   ground: '#5d9827',
   groundDark: '#3d6f19',
@@ -52,7 +52,8 @@ Scenes use **PNG background + track** art. See **[assets.md](./assets.md)** for 
 },
 ```
 
-3. Scene buttons are generated automatically from `SCENES`, so no extra lobby markup is needed.
+1. Use the exact folder slug in `folder:`. Current scene assets follow a numbered convention like `01-mountain-valley` and `08-sky-kingdom`.
+1. Scene buttons are generated automatically from `SCENES`, so no extra lobby markup is needed.
 
 New scene asset paths load automatically on boot via **`loadBackgroundLayers()`**.
 

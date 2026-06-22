@@ -26,7 +26,7 @@ URL in code: **`/sprites/<key>/run.png`** (leading slash, lowercase paths recomm
 ### Asset requirements
 
 | Requirement | Detail |
-|-------------|--------|
+| ----------- | ------ |
 | **Format** | PNG with **transparent** background (not solid black) |
 | **Layout** | Single **horizontal row** of frames |
 | **Direction** | Character **faces right** (race scrolls left → right) |
@@ -98,10 +98,10 @@ Each character should exist only once in `CHARACTERS` with a `sheet:` entry — 
 - [ ] Entry added to `CHARACTERS` in `characters.js`
 - [ ] `pnpm dev` — cycle racer in lobby, start a race, check animation on phone + desktop
 
-### Troubleshooting
+### Character troubleshooting
 
 | Issue | Fix |
-|-------|-----|
+| ----- | --- |
 | Black box around character | Re-export PNG with transparency |
 | Sprite doesn’t appear | Check browser console; verify path and filename case |
 | Wrong animation / sliding feet | Wrong `frameW` or `frames` count |
@@ -115,32 +115,30 @@ Keep license files or links (e.g. [Craftpix licenses](https://craftpix.net/file-
 
 ## Background art (PNG) — implemented
 
-Scenes now use a fixed three-file scene pack instead of the older layered parallax background system.
+Scenes now use a fixed two-file scene pack instead of the older layered parallax background system.
 
-### Folder layout
+### Scene folder layout
 
 ```txt
 public/background/
-└── volcanic-racing/
+└── 07-volcanic-racing/
     ├── 01-background.png
-    ├── 02-track.png
-    └── 03-crowd-front.png
+    └── 02-track.png
 ```
 
-URL in code: **`/background/<scene>/<file>.png`**.
+URL in code: **`/background/<scene-folder>/<file>.png`**.
 
-### Asset requirements
+### Scene asset requirements
 
 | Requirement | Detail |
-|-------------|--------|
+| ----------- | ------ |
 | **Format** | PNG |
-| **Layout** | One background, one track, one front crowd file per scene |
+| **Layout** | One background file and one track file per scene |
 | **Background size** | Use [asset-dimensions.md](./asset-dimensions.md) for the current exact spec; the current one-file background target is **3200 × 1100** |
 | **Track size** | Recommended **2560 × 960** |
-| **Crowd size** | Recommended **2560 × 280** |
-| **Transparency** | `03-crowd-front.png` should keep a transparent background |
+| **Folder naming** | Use the exact scene folder slug from `scenes.js`, currently in the form `NN-scene-name` |
 
-### Register in code
+### Register scene in code
 
 Add or edit a scene in **`src/game/scenes.js`**:
 
@@ -148,19 +146,16 @@ Add or edit a scene in **`src/game/scenes.js`**:
 {
   key: 'volcanic-racing',
   name: 'Volcanic Racing',
-  backdrop: '/background/volcanic-racing/01-background.png',
-  trackTexture: '/background/volcanic-racing/02-track.png',
-  overlayFront: '/background/volcanic-racing/03-crowd-front.png',
+  folder: '07-volcanic-racing',
 }
 ```
 
-**`src/game/backgrounds.js`** loads `scene.backdrop`, `scene.trackTexture`, and `scene.overlayFront` on boot. **`drawScene()`** in **`engine.js`** draws the background above the track, the track texture across the race lanes, and the crowd as the front overlay.
+**`src/game/backgrounds.js`** loads `scene.backdrop` and `scene.trackTexture` on boot. **`drawScene()`** in **`engine.js`** draws the background above the track and the track texture across the race lanes.
 
-### Background checklist
+### Scene checklist
 
-- [ ] `01-background.png`, `02-track.png`, `03-crowd-front.png` exist under `public/background/<scene>/`
+- [ ] `01-background.png` and `02-track.png` exist under `public/background/<scene-folder>/`
 - [ ] Background matches the current size guidance in [asset-dimensions.md](./asset-dimensions.md)
-- [ ] Crowd export keeps transparency and minimal empty padding
 - [ ] Track art keeps racers readable
 - [ ] `pnpm dev` — cycle scenes in lobby, race on mobile + desktop widths
 
@@ -169,10 +164,10 @@ Add or edit a scene in **`src/game/scenes.js`**:
 ## Quick reference
 
 | Asset type | Location | Code touchpoint | Status |
-|------------|----------|-----------------|--------|
+| ---------- | -------- | --------------- | ------ |
 | Character run sheet | `public/sprites/<key>/run.png` | `characters.js` → `sheet:` | **Live** |
 | Scene lane colours | — | `scenes.js` → `track`, `groundDark`, `laneLine` | **Live** |
-| Scene pack art | `public/background/<scene>/…` | `scenes.js` → `backdrop`, `trackTexture`, `overlayFront` | **Live** |
+| Scene pack art | `public/background/<scene-folder>/…` | `scenes.js` → `folder`, `backdrop`, `trackTexture` | **Live** |
 
 ---
 
@@ -180,5 +175,5 @@ Add or edit a scene in **`src/game/scenes.js`**:
 
 - [extending.md](./extending.md) — scenes, power-ups
 - [asset-dimensions.md](./asset-dimensions.md) — exact scene pack sizes
-- [scene-safe-zones.md](./scene-safe-zones.md) — background and crowd placement guide
+- [scene-safe-zones.md](./scene-safe-zones.md) — background composition guide
 - [deployment.md](./deployment.md) — build output includes `public/` assets

@@ -6,12 +6,20 @@ The previous background recommendations of `2560 x 1440` and later `3200 x 1600`
 
 ## Scene pack structure
 
-Each scene currently uses one background file:
+Each scene currently uses a two-file scene pack:
 
 ```txt
-public/background/<scene-key>/
+public/background/<nn-scene-slug>/
 ├── 01-background.png
 └── 02-track.png
+```
+
+Current examples:
+
+```txt
+01-mountain-valley
+02-neo-tokyo
+08-sky-kingdom
 ```
 
 ## Recommended dimensions
@@ -106,6 +114,7 @@ These are not part of a scene pack, but useful as a reference.
 
 - Use PNG for all scene assets
 - Keep filenames lowercase and exact
+- Keep scene folder names lowercase and exact; the current convention is `NN-scene-name`
 - Do not bake the track into the background
 - Keep transparency only where it is needed, mainly on sprite sheets
 - Avoid heavy blur because the game art reads best with crisp shapes

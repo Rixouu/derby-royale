@@ -23,7 +23,7 @@ The game was built by [Jonathan Rycx](https://github.com/Rixouu), who leads prod
 
 ### 🌍 Scenes & atmosphere
 
-- **8 scene packs**: Enchanted Forest, Mountain Valley, Ancient Greek, Desert Grand Prix, Neo Tokyo, Space Colony, Tropical Island, Volcanic Racing.
+- **8 scene packs**: Sky Kingdom, Mountain Valley, Ancient Greek, Desert Grand Prix, Neo Tokyo, Space Colony, Tropical Island, Volcanic Racing.
 - Each scene uses layered **background + track** art for a more bespoke look.
 - **3 race lengths**: Sprint (quick), Classic (balanced), Marathon (epic).
 
