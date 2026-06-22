@@ -41,6 +41,7 @@ let START_X=LENGTHS[lengthIdx].start, FINISH_X=LENGTHS[lengthIdx].finish;
 
 let trackMetricsCache=null, trackMetricsCacheN=-1, trackMetricsCacheScene=-1;
 function invalidateTrackMetrics(){ trackMetricsCache=null; trackMetricsCacheN=-1; trackMetricsCacheScene=-1; }
+function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
 function sceneTrackLayout(){
   const S=SCENES[sceneIdx]||{};
   return {
@@ -77,6 +78,11 @@ let camX=0;                                       // world x at left edge (in wo
 let pxPerUnit=10;                                 // screen px per world unit (set per frame)
 function worldToScreenX(wx){ return (wx - camX)*pxPerUnit; }
 function laneCenterY(i,n){ const m=trackMetrics(n); return m.topPad + m.laneH*(i+0.5); }
+function laneBounds(i,n){
+  const m=trackMetrics(n);
+  const top=m.topPad + m.laneH*i;
+  return { top: top, bottom: top + m.laneH };
+}
 
 /* ============================================================
    SCENE BACKGROUND
@@ -89,14 +95,62 @@ function sceneRacerYOffset(){
   return S && S.racerYOffset ? S.racerYOffset : 0;
 }
 
-function sceneRacerBaselineFactor(){
-  const S=SCENES[sceneIdx];
-  return S && S.racerBaselineFactor != null ? S.racerBaselineFactor : 0.32;
+function racerLayout(ch, laneI, n, popScale, bob){
+  const m=trackMetrics(n);
+  const lane=laneBounds(laneI,n);
+  const padTop=Math.max(3, Math.round(m.laneH*0.08));
+  const padBottom=Math.max(4, Math.round(m.laneH*0.10));
+  const fittedScale=Math.min(PXS, Math.max(1, (m.laneH-padTop-padBottom)/GH));
+  const scale=fittedScale*popScale;
+  const sz=spriteScreenSize(ch,scale);
+  const baseBaseline=lane.bottom-padBottom-bob;
+  const sceneOffset=sceneRacerYOffset();
+  const minOffset=lane.top+padTop+sz.h-baseBaseline;
+  const baseline=baseBaseline+clamp(sceneOffset,minOffset,0);
+  const shadowY=lane.bottom-padBottom*0.35;
+  return {
+    laneTop: lane.top,
+    laneBottom: lane.bottom,
+    scale: scale,
+    size: sz,
+    baseline: baseline,
+    shadowY: shadowY,
+  };
 }
 
-function sceneRacerShadowFactor(){
-  const S=SCENES[sceneIdx];
-  return S && S.racerShadowFactor != null ? S.racerShadowFactor : 0.34;
+const laneAuditState={ counts:{} };
+function resetLaneAudit(){
+  laneAuditState.counts={};
+}
+function laneAuditBucket(n){
+  if(!laneAuditState.counts[n]){
+    laneAuditState.counts[n]={ playerCount:n, maxOverflowTop:0, maxOverflowBottom:0, samples:0 };
+  }
+  return laneAuditState.counts[n];
+}
+function auditLaneContainment(layout,n){
+  const bucket=laneAuditBucket(n);
+  const overflowTop=Math.max(0, layout.laneTop-(layout.baseline-layout.size.h));
+  const overflowBottom=Math.max(0, layout.baseline-layout.laneBottom);
+  bucket.maxOverflowTop=Math.max(bucket.maxOverflowTop, overflowTop);
+  bucket.maxOverflowBottom=Math.max(bucket.maxOverflowBottom, overflowBottom);
+  bucket.samples+=1;
+}
+function getLaneAuditSummary(){
+  const counts=Object.keys(laneAuditState.counts).sort(function(a,b){ return Number(a)-Number(b); }).map(function(key){
+    const bucket=laneAuditState.counts[key];
+    return {
+      playerCount: bucket.playerCount,
+      maxOverflowTop: Number(bucket.maxOverflowTop.toFixed(3)),
+      maxOverflowBottom: Number(bucket.maxOverflowBottom.toFixed(3)),
+      samples: bucket.samples,
+      ok: bucket.maxOverflowTop===0 && bucket.maxOverflowBottom===0,
+    };
+  });
+  return {
+    counts: counts,
+    ok: counts.every(function(bucket){ return bucket.ok; }),
+  };
 }
 
 function drawParallaxLayer(img, parallax, anchorBottom){
@@ -331,6 +385,7 @@ let countdownTimer=0, raceStartTimer=0, resultsTimer=0;
 /* ---------- audio (same approach as before) ---------- */
 let audioCtx=null, muted=false;
 function ac(){ if(!audioCtx){ const A=window.AudioContext||window['webkitAudioContext']; if(A)audioCtx=new A(); } return audioCtx; }
+function makePlayer(i){ return {name:'',colorIdx:i%COLORS.length,charIdx:i%CHAR_COUNT}; }
 function tone(freq,delay,dur,type,vol){ if(muted)return; const c=ac(); if(!c)return; const t0=c.currentTime+delay;
   const o=c.createOscillator(),g=c.createGain(); o.type=type||'square'; o.frequency.value=freq;
   g.gain.setValueAtTime(0.0001,t0); g.gain.linearRampToValueAtTime(vol||0.12,t0+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
@@ -527,7 +582,7 @@ let clockT=0, realT=0, timeScale=1, hudTick=0;
 
 function drawRacersAndItems(n){
   const m=trackMetrics(n);
-  const p=PXS;                                   // sprite pixel size
+  const p=PXS;                                   // base sprite pixel size
   // power-up boxes
   if(powerUpsOn && (state==='racing'||state==='countdown')){
     powerups.forEach(function(b){ if(!b.alive)return; var sx=worldToScreenX(b.x); if(sx<-20||sx>VW+20)return;
@@ -545,40 +600,42 @@ function drawRacersAndItems(n){
   var order=racers.map(function(_,idx){return idx;}).sort(function(a,b){return racers[a].i-racers[b].i;});
   order.forEach(function(idx){
     var r=racers[idx]; var sx=worldToScreenX(r.x);
-    var cy=laneCenterY(r.i,n)+sceneRacerYOffset();
     var ch=CHARACTERS[r.p.charIdx];
     var frameCount=frameCountFor(ch);
     var idleFrame=idleFrameFor(ch);
     var frame=(r.gait>0.3)? (Math.floor(r.phase)%frameCount) : idleFrame;
     var popScale=r.pop<1? (0.4+0.6*r.pop):1;
-    var scale=p*popScale;
-    var sz=spriteScreenSize(ch,scale);
     // vertical bob: peaks on the "pass" frames of the cycle
-    var bob=(r.gait>0.3)? Math.abs(Math.sin(r.phase*Math.PI*0.5))*(p*1.1) : 0;
-    var baseline=cy + m.laneH*sceneRacerBaselineFactor() - bob;
+    var bob=(r.gait>0.3)? Math.abs(Math.sin(r.phase*Math.PI*0.5))*Math.max(1.5, Math.min(p*1.1,m.laneH*0.08)) : 0;
+    var layout=racerLayout(ch, r.i, n, popScale, bob);
+    var scale=layout.scale;
+    var sz=layout.size;
+    var baseline=layout.baseline;
     // shadow
     ctx.fillStyle='rgba(0,0,0,.20)'; var shW=sz.w*0.55; ctx.beginPath();
-    ctx.ellipse(sx, cy+m.laneH*sceneRacerShadowFactor(), shW*0.5, Math.max(3,p*1.4), 0,0,7); ctx.fill();
+    ctx.ellipse(sx, layout.shadowY, shW*0.5, Math.max(3,Math.min(p*1.4,m.laneH*0.16)), 0,0,7); ctx.fill();
     // shield bubble
     if(r.shielded){ ctx.strokeStyle='rgba(159,232,255,.9)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(sx,baseline-sz.h*0.5,sz.w*0.45,0,7); ctx.stroke(); }
     var starred=r.starEnd>clockT;
     blitSprite(r.p.charIdx, COLORS[r.p.colorIdx], frame, sx, baseline, scale, starred);
+    auditLaneContainment(layout,n);
     // floating fx glyph
     if(r.fxT && realT-r.fxT<0.9){ var age=realT-r.fxT; ctx.globalAlpha=Math.max(0,1-age*1.1);
       ctx.fillStyle=r.fxColor||'#fff'; ctx.font='bold '+Math.round(p*5)+'px "Press Start 2P",monospace'; ctx.textAlign='center';
       ctx.fillText(r.fxText||'', sx, baseline-sz.h - age*22); ctx.globalAlpha=1; ctx.textAlign='left'; }
     // name label (HTML-free, drawn on canvas) above racer
-    drawNameLabel(displayName(r.p,r.i), COLORS[r.p.colorIdx], sx, baseline-sz.h-8, r.i);
+    drawNameLabel(displayName(r.p,r.i), COLORS[r.p.colorIdx], sx, baseline-sz.h-8, r.i, m.laneH, layout.laneTop);
   });
 }
 
-function drawNameLabel(name,color,cx,cy,laneI){
-  ctx.font='600 '+Math.max(11,Math.round(PXS*3.4))+'px "Jersey 10",monospace'; ctx.textBaseline='middle';
+function drawNameLabel(name,color,cx,cy,laneI,laneH,laneTop){
+  const fontSize=Math.max(10,Math.min(Math.round(PXS*3.4),Math.round(laneH*0.28)));
+  ctx.font='600 '+fontSize+'px "Jersey 10",monospace'; ctx.textBaseline='middle';
   var tw=ctx.measureText(name).width;
-  var padX=6, dot=Math.max(6,PXS*1.8), gap=4;
-  var w=padX*2+dot+gap+tw, h=Math.max(16,PXS*4.6);
+  var padX=Math.max(5,Math.round(fontSize*0.42)), dot=Math.max(6,fontSize*0.55), gap=4;
+  var w=padX*2+dot+gap+tw, h=Math.max(15,Math.round(fontSize*1.35));
   // stagger label vertically a touch by lane parity to reduce overlap when bunched
-  var yy=cy - h*0.3 - (laneI%2? 0: 1);
+  var yy=Math.max(laneTop+h*0.5+2, cy - h*0.3 - (laneI%2? 0: 1));
   var x=cx - w/2;
   // box
   ctx.fillStyle='rgba(44,37,28,.68)'; ctx.fillRect(Math.round(x),Math.round(yy-h/2),Math.round(w),Math.round(h));
@@ -647,7 +704,7 @@ function clearRaceTimers(){
   clearTimeout(raceStartTimer); raceStartTimer=0;
   clearTimeout(resultsTimer); resultsTimer=0;
 }
-function startRace(){ clearRaceTimers(); hideToast(); setSlowmo(false); buildRacers(); spawnPowerups();
+function startRace(){ clearRaceTimers(); resetLaneAudit(); hideToast(); setSlowmo(false); buildRacers(); spawnPowerups();
   lobbyEl.classList.add('hidden'); resultsEl.classList.add('hidden'); countWrap.classList.add('hidden'); hudEl.classList.remove('hidden'); renderHUD();
   state='countdown'; syncRestartButton(); camX=START_X-4; winnerCrossRealT=0; allDoneT=0; forceEndT=0; nextEventT=0; runCountdown(); }
 function runCountdown(){ countWrap.classList.remove('hidden'); const steps=['3','2','1','GO!']; var i=0;
@@ -807,6 +864,39 @@ function bindUi(){
   syncRestartButton();
 }
 
+function debugSetPlayerCount(count){
+  count=clamp(Math.round(Number(count)||1),1,MAX_PLAYERS);
+  players=Array.from({length:count},function(_,i){ return makePlayer(i); });
+  buildRacers();
+  invalidateTrackMetrics();
+  renderLobby();
+  return count;
+}
+
+function debugReturnToLobby(){
+  clearRaceTimers();
+  resultsEl.classList.add('hidden');
+  countWrap.classList.add('hidden');
+  state='lobby';
+  syncRestartButton();
+  hudEl.classList.add('hidden');
+  buildRacers();
+  renderLobby();
+  lobbyEl.classList.remove('hidden');
+}
+
+function installDebugTools(){
+  if(!import.meta.env.DEV) return;
+  window.__pixelOlympicsDebug={
+    setPlayerCount: debugSetPlayerCount,
+    resetLaneAudit: resetLaneAudit,
+    getLaneAudit: getLaneAuditSummary,
+    getPlayerCount: function(){ return players.length; },
+    startRace: function(){ if(state==='lobby') startRace(); },
+    returnToLobby: debugReturnToLobby,
+  };
+}
+
 /* ============================================================
    MAIN LOOP
    ============================================================ */
@@ -851,6 +941,7 @@ export async function bootGame() {
     loadImage(POWERUP_ASSET_SRC),
   ]);
   bindUi();
+  installDebugTools();
   renderLobby();
   buildRacers();
   requestAnimationFrame(frame);
