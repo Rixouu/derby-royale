@@ -28,7 +28,9 @@ function resize(){
 
 let tabHidden=false;
 
-let lengthIdx=1, sceneIdx=0, powerUpsOn=true;
+const DEFAULT_SCENE_KEY='tropical-island';
+const DEFAULT_SCENE_IDX=Math.max(0, SCENES.findIndex(function(scene){ return scene.key===DEFAULT_SCENE_KEY; }));
+let lengthIdx=1, sceneIdx=DEFAULT_SCENE_IDX, powerUpsOn=true;
 let START_X=LENGTHS[lengthIdx].start, FINISH_X=LENGTHS[lengthIdx].finish;
 
 let trackMetricsCache=null, trackMetricsCacheN=-1, trackMetricsCacheScene=-1;
