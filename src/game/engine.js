@@ -4,15 +4,15 @@ import {
 } from './config.js';
 import { rnd } from './color.js';
 import { CHARACTERS, CHAR_COUNT } from './characters.js';
-import { loadSpriteSheets, frameCountFor, idleFrameFor, spriteScreenSize } from './sprite-sheets.js';
+import { currentSceneArtReady, gameAssets, preloadGameAssets, updateLobbySceneReveal } from './assets.js';
+import { frameCountFor, idleFrameFor, spriteScreenSize, spriteSourceForFrame, spriteSourceRectForFrame } from './sprite-sheets.js';
 import { SCENES } from './scenes.js';
-import { loadBackgroundImages, loadBackgroundLayers, sceneImageSources, defaultParallax } from './backgrounds.js';
+import { defaultParallax } from './backgrounds.js';
 
 /* ---------- low-res pixel canvas ---------- */
 let view, ctx;
 let VW=0, VH=0, DPR=1;           // device pixel size
 let PXS=4;                        // pixels-per-art-pixel (scale); set on resize
-const POWERUP_ASSET_SRC='/power/power-up.png';
 const POWERUP_IMAGE_BOUNDS={ srcX:246, srcY:243, srcW:604, srcH:543 };
 function resize(){
   DPR=Math.min(window.devicePixelRatio||1,2);
@@ -28,15 +28,6 @@ function resize(){
 
 let tabHidden=false;
 
-function loadImage(src) {
-  return new Promise(function(resolve, reject){
-    const img=new Image();
-    img.onload=function(){ resolve(img); };
-    img.onerror=function(){ reject(new Error('Failed to load image: '+src)); };
-    img.src=src;
-  });
-}
-
 let lengthIdx=1, sceneIdx=0, powerUpsOn=true;
 let START_X=LENGTHS[lengthIdx].start, FINISH_X=LENGTHS[lengthIdx].finish;
 
@@ -44,12 +35,32 @@ let trackMetricsCache=null, trackMetricsCacheN=-1, trackMetricsCacheScene=-1;
 function invalidateTrackMetrics(){ trackMetricsCache=null; trackMetricsCacheN=-1; trackMetricsCacheScene=-1; }
 function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
 function isPortraitMobile(){ return VW<=700 && VH>VW; }
+function usesProportionalTrackTexture(S){
+  return !!(S && S.trackTexture && S.trackTextureRenderMode === 'proportional');
+}
+function sceneTrackHeightScale(S){
+  if(!S) return 1;
+  return isPortraitMobile()
+    ? (S.trackHeightScaleMobile!=null ? S.trackHeightScaleMobile : 1)
+    : (S.trackHeightScale!=null ? S.trackHeightScale : 1);
+}
 function getTrackTextureSlices(S, img){
   const slices=S.trackTextureSlices||{};
   const laneSurfaceTop=Math.max(0, Math.floor(img.height*(slices.laneSurfaceTop||0)));
   const laneSurfaceBottom=Math.min(img.height, Math.ceil(img.height*(slices.laneSurfaceBottom||0.72)));
   const lowerApronTop=Math.max(laneSurfaceBottom, Math.floor(img.height*(slices.lowerApronTop||0.72)));
   return { laneSurfaceTop, laneSurfaceBottom, lowerApronTop };
+}
+function getTrackTextureVerticalRatios(S, img){
+  if(!usesProportionalTrackTexture(S) || !img){
+    return { upperRatio: 0, lowerRatio: 0 };
+  }
+  const slices=getTrackTextureSlices(S, img);
+  const laneSurfaceHeight=Math.max(1, slices.laneSurfaceBottom-slices.laneSurfaceTop);
+  return {
+    upperRatio: slices.laneSurfaceTop/laneSurfaceHeight,
+    lowerRatio: Math.max(0, img.height-slices.laneSurfaceBottom)/laneSurfaceHeight,
+  };
 }
 function getTrackApronRenderMetrics(S, img){
   const sliceMetrics=getTrackTextureSlices(S, img);
@@ -80,7 +91,12 @@ function getTrackApronRenderMetrics(S, img){
 }
 function getVisualTrackLaneCount(n){
   const S=SCENES[sceneIdx]||{};
-  if(isPortraitMobile() && S.trackTexture) return Math.max(n, S.mobileVisualLaneCount||6);
+  if(S.trackTexture){
+    const targetLaneCount=isPortraitMobile()
+      ? (S.mobileVisualLaneCount!=null ? S.mobileVisualLaneCount : (S.visualLaneCount||6))
+      : (S.visualLaneCount||6);
+    return Math.max(n, targetLaneCount);
+  }
   return n;
 }
 function laneSlotIndex(i, n){
@@ -90,7 +106,8 @@ function laneSlotIndex(i, n){
 }
 function sceneTrackApronHeight(){
   const S=SCENES[sceneIdx]||{};
-  const img=S.trackTexture ? backgroundImages[S.trackTexture] : null;
+  if(usesProportionalTrackTexture(S)) return 0;
+  const img=S.trackTexture ? gameAssets.backgroundImages[S.trackTexture] : null;
   if(!img) return 0;
   return getTrackApronRenderMetrics(S, img).destH;
 }
@@ -115,22 +132,42 @@ function sceneTrackLayout(){
 function trackMetrics(n){
   if(trackMetricsCache && trackMetricsCacheN===n && trackMetricsCacheScene===sceneIdx) return trackMetricsCache;
   n=Math.max(n,1);
+  const S=SCENES[sceneIdx]||{};
+  const trackImg=S.trackTexture ? gameAssets.backgroundImages[S.trackTexture] : null;
+  const textureRatios=getTrackTextureVerticalRatios(S, trackImg);
+  const textureHeightRatio=1+textureRatios.upperRatio+textureRatios.lowerRatio;
+  const trackHeightScale=usesProportionalTrackTexture(S) ? sceneTrackHeightScale(S) : 1;
   const visualLaneCount=getVisualTrackLaneCount(n);
   const layout=sceneTrackLayout();
   const skyRatio=layout.skyRatio;
   const botPadTarget=Math.max(Math.floor(VH*layout.botRatio), layout.minBottomPad);
-  const idealLaneH=Math.round(PXS*(GH+2));
-  const topPad=Math.floor(VH*skyRatio);
-  const maxBandH=Math.max(Math.floor(VH*0.18), VH-topPad-botPadTarget);
+  const idealLaneH=Math.max(Math.floor(PXS*8), Math.round(PXS*(GH+2)*trackHeightScale));
+  const trackTop=Math.floor(VH*skyRatio);
+  const maxBandH=Math.max(Math.floor(VH*0.18), Math.floor((VH-trackTop-botPadTarget)/textureHeightRatio));
   let laneH=idealLaneH;
   let bandH=laneH*visualLaneCount;
   if(bandH>maxBandH){
     laneH=Math.max(Math.floor(PXS*8),Math.floor(maxBandH/visualLaneCount));
     bandH=laneH*visualLaneCount;
   }
-  const botPad=VH-topPad-bandH;
+  const upperApronH=Math.round(bandH*textureRatios.upperRatio);
+  const lowerApronH=Math.round(bandH*textureRatios.lowerRatio);
+  const topPad=trackTop+upperApronH;
+  const botPad=VH-topPad-bandH-lowerApronH;
   const horizonH=Math.max(Math.round(PXS*2),10);
-  trackMetricsCache={topPad,botPad,bandH,laneH,horizonH,skyBottom:topPad+horizonH,visualLaneCount};
+  trackMetricsCache={
+    topPad,
+    trackTop,
+    trackBottom: topPad+bandH+lowerApronH,
+    upperApronH,
+    lowerApronH,
+    botPad,
+    bandH,
+    laneH,
+    horizonH,
+    skyBottom: trackTop+horizonH,
+    visualLaneCount
+  };
   trackMetricsCacheN=n;
   trackMetricsCacheScene=sceneIdx;
   return trackMetricsCache;
@@ -149,19 +186,13 @@ function laneBounds(i,n){
 /* ============================================================
    SCENE BACKGROUND
    ============================================================ */
-let backgroundImages={};
-let powerupImage=null;
-let lobbySceneReveal=0;
-
 function syncCanvasVisibility(){
   if(!view) return;
-  const shouldHideLobbyCanvas=state==='lobby' && !currentSceneArtReady();
+  const shouldHideLobbyCanvas=state==='lobby' && !currentSceneArtReady(sceneIdx);
+  // #region debug-point D:canvas-visibility
+  if (typeof window !== 'undefined' && window.__dbgCanvasHidden !== shouldHideLobbyCanvas) { window.__dbgCanvasHidden = shouldHideLobbyCanvas; fetch("http://127.0.0.1:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"lobby-scene-art",runId:"post-fix",hypothesisId:"D",location:"src/game/engine.js:syncCanvasVisibility",msg:"[DEBUG] canvas visibility changed",data:{state:state,shouldHideLobbyCanvas:shouldHideLobbyCanvas,sceneIdx:sceneIdx},ts:Date.now()})}).catch(()=>{}); }
+  // #endregion
   view.style.opacity=shouldHideLobbyCanvas ? '0' : '1';
-}
-
-function currentSceneArtReady(){
-  const S=SCENES[sceneIdx];
-  return !!(S.backdrop && S.trackTexture && backgroundImages[S.backdrop] && backgroundImages[S.trackTexture]);
 }
 
 function sceneRacerYOffset(){
@@ -276,7 +307,7 @@ function drawBackdropCover(img, anchorBottom){
 }
 
 function drawTexturedLaneBand(S, m, n){
-  const img=backgroundImages[S.trackTexture];
+  const img=gameAssets.backgroundImages[S.trackTexture];
   if(!img){
     drawPixelLaneBand(S,m,n);
     drawPixelGround(m.topPad+m.bandH+2,VH,S.groundDark,S.track,S.laneLine);
@@ -290,6 +321,29 @@ function drawTexturedLaneBand(S, m, n){
   const bottomDestTop=Math.round(m.topPad+m.bandH);
   const renderLaneCount=m.visualLaneCount||getVisualTrackLaneCount(n);
   const sourceLaneH=Math.max(1, laneSurfaceHeight/renderLaneCount);
+
+  if(usesProportionalTrackTexture(S)){
+    const preserveAspect=isPortraitMobile();
+    const proportionalDestH=m.upperApronH+m.bandH+m.lowerApronH;
+    const proportionalScale=proportionalDestH/img.height;
+    const destX=0;
+    const destW=preserveAspect ? Math.max(VW, Math.round(img.width*proportionalScale)) : VW;
+    if(m.upperApronH>0 && laneSurfaceTop>0){
+      ctx.drawImage(img, 0, 0, img.width, laneSurfaceTop, destX, Math.round(m.trackTop), destW, m.upperApronH);
+    }
+    for(let i=0;i<renderLaneCount;i++){
+      const y0=Math.round(m.topPad+m.laneH*i);
+      const srcY=Math.round(laneSurfaceTop+sourceLaneH*i);
+      const srcH=Math.max(1, Math.round(i===renderLaneCount-1 ? laneSurfaceBottom-srcY : sourceLaneH));
+      ctx.drawImage(img, 0, srcY, img.width, srcH, destX, y0, destW, m.laneH);
+    }
+    const lowerSrcY=Math.min(img.height-1, laneSurfaceBottom);
+    const lowerSrcH=Math.max(1, img.height-lowerSrcY);
+    if(m.lowerApronH>0 && lowerSrcH>0){
+      ctx.drawImage(img, 0, lowerSrcY, img.width, lowerSrcH, destX, bottomDestTop, destW, m.lowerApronH);
+    }
+    return;
+  }
 
   for(let i=0;i<renderLaneCount;i++){
     const y0=Math.round(m.topPad+m.laneH*i);
@@ -367,14 +421,15 @@ function drawScene(n){
   const sky=S.sky;
   const layers=S.layers||[];
   const backLayers=[], frontLayers=[];
-  const artAlpha=(state==='lobby') ? lobbySceneReveal : 1;
+  const artAlpha=(state==='lobby') ? gameAssets.lobbySceneReveal : 1;
+  const groundTop=usesProportionalTrackTexture(S) ? Math.round(m.trackBottom+2) : Math.round(m.topPad+m.bandH+2);
   layers.forEach(function(layer){ (layer.front? frontLayers : backLayers).push(layer); });
 
   if(sky) drawVerticalGradient(0,0,VW,m.skyBottom,sky[0],sky[1]);
-  if(S.backdrop && backgroundImages[S.backdrop] && artAlpha>0){
+  if(S.backdrop && gameAssets.backgroundImages[S.backdrop] && artAlpha>0){
     ctx.save();
     ctx.globalAlpha=artAlpha;
-    drawBackdropCover(backgroundImages[S.backdrop], m.skyBottom);
+    drawBackdropCover(gameAssets.backgroundImages[S.backdrop], m.skyBottom);
     ctx.restore();
   }
 
@@ -384,28 +439,28 @@ function drawScene(n){
     ctx.beginPath(); ctx.rect(0,0,VW,m.skyBottom); ctx.clip();
     backLayers.forEach(function(layer,i){
       const par=layer.parallax!=null? layer.parallax : defaultParallax(i,backLayers.length);
-      drawParallaxLayer(backgroundImages[layer.src], par, m.skyBottom);
+      drawParallaxLayer(gameAssets.backgroundImages[layer.src], par, m.skyBottom);
     });
     ctx.restore();
   }
 
   drawPixelLaneBand(S,m,n);
-  drawPixelGround(m.topPad+m.bandH+2,VH,S.groundDark,S.track,S.laneLine);
-  if(S.trackTexture && backgroundImages[S.trackTexture] && artAlpha>0) {
+  drawPixelGround(groundTop,VH,S.groundDark,S.track,S.laneLine);
+  if(S.trackTexture && gameAssets.backgroundImages[S.trackTexture] && artAlpha>0) {
     ctx.save();
     ctx.globalAlpha=artAlpha;
     drawTexturedLaneBand(S,m,n);
     ctx.restore();
   }
 
-  const bgScale=backLayers.length && backgroundImages[backLayers[0].src]
-    ? m.skyBottom/backgroundImages[backLayers[0].src].height : m.skyBottom/324;
+  const bgScale=backLayers.length && gameAssets.backgroundImages[backLayers[0].src]
+    ? m.skyBottom/gameAssets.backgroundImages[backLayers[0].src].height : m.skyBottom/324;
   if(artAlpha>0){
     ctx.save();
     ctx.globalAlpha=artAlpha;
     frontLayers.forEach(function(layer,i){
       const par=layer.parallax!=null? layer.parallax : defaultParallax(backLayers.length+i,layers.length);
-      drawFrontParallaxLayer(backgroundImages[layer.src], par, m.topPad, bgScale);
+      drawFrontParallaxLayer(gameAssets.backgroundImages[layer.src], par, m.topPad, bgScale);
     });
     ctx.restore();
   }
@@ -414,24 +469,32 @@ function drawScene(n){
 }
 
 function drawStartFinish(m){
+  const S=SCENES[sceneIdx]||{};
   const top=m.topPad, h=m.bandH;
+  const finishInsetTop=Math.max(0, Math.round(m.laneH*(S.finishLineInsetTopScale||0)));
+  const finishInsetBottom=Math.max(0, Math.round(m.laneH*(S.finishLineInsetBottomScale||0)));
+  const finishTop=top+finishInsetTop;
+  const finishH=Math.max(8, h-finishInsetTop-finishInsetBottom);
   // start line (left)
-  var sx=worldToScreenX(START_X);
-  ctx.fillStyle='rgba(255,255,255,.85)'; ctx.fillRect(Math.round(sx)-1,top,3,h);
+  if(!S.hideRuntimeStartLine){
+    var sx=worldToScreenX(START_X);
+    ctx.fillStyle='rgba(255,255,255,.85)';
+    ctx.fillRect(Math.round(sx)-1,top,3,h);
+  }
   // finish: checkered + tape
   var fx=worldToScreenX(FINISH_X);
   if(fx>-30 && fx<VW+30){
     var cell=Math.max(6,Math.round(m.laneH/4));
-    for(let yy=0; yy<h; yy+=cell){
+    for(let yy=0; yy<finishH; yy+=cell){
       for(let k=0;k<2;k++){
         var on=((Math.floor(yy/cell)+k)%2)===0;
         ctx.fillStyle=on?'#fff':'#3d3018';
-        ctx.fillRect(Math.round(fx)+k*cell, top+yy, cell, Math.min(cell,h-yy));
+        ctx.fillRect(Math.round(fx)+k*cell, finishTop+yy, cell, Math.min(cell,finishH-yy));
       }
     }
     // finish pole + flag
-    ctx.fillStyle='#d8d8d8'; ctx.fillRect(Math.round(fx)-3,top-18,4,20);
-    ctx.fillStyle='#ff4d4d'; ctx.fillRect(Math.round(fx)+1,top-18,12,8);
+    ctx.fillStyle='#d8d8d8'; ctx.fillRect(Math.round(fx)-3,finishTop-18,4,20);
+    ctx.fillStyle='#ff4d4d'; ctx.fillRect(Math.round(fx)+1,finishTop-18,12,8);
   }
 }
 
@@ -440,7 +503,6 @@ function drawStartFinish(m){
    Pre-render each (char, color, frame) to an offscreen canvas once.
    ============================================================ */
 const spriteCache={};
-let sheetImages={};
 
 function getSprite(charIdx,color,frame){
   if(CHARACTERS[charIdx].sheet) return null;
@@ -460,14 +522,14 @@ function blitSprite(charIdx,color,frame,cx,cyBaseline,p,flash){
   const dx=Math.round(cx-size.w/2), dy=Math.round(cyBaseline-size.h);
 
   if(ch.sheet){
-    const img=sheetImages[ch.sheet.src];
+    const imgSrc=spriteSourceForFrame(ch, frame);
+    const img=imgSrc ? gameAssets.sheetImages[imgSrc] : null;
     if(!img) return;
-    const fw=ch.sheet.frameW, fh=ch.sheet.frameH;
-    const sx=frame*fw;
-    ctx.drawImage(img,sx,0,fw,fh,dx,dy,size.w,size.h);
+    const source=spriteSourceRectForFrame(ch, frame);
+    ctx.drawImage(img,source.sx,source.sy,source.sw,source.sh,dx,dy,size.w,size.h);
     if(flash){
       ctx.globalAlpha=0.35; ctx.globalCompositeOperation='lighter';
-      ctx.drawImage(img,sx,0,fw,fh,dx,dy,size.w,size.h);
+      ctx.drawImage(img,source.sx,source.sy,source.sw,source.sh,dx,dy,size.w,size.h);
       ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=1;
     }
     return;
@@ -482,10 +544,14 @@ function blitSprite(charIdx,color,frame,cx,cyBaseline,p,flash){
    GAME STATE
    ============================================================ */
 let state='lobby';
+function characterIndexByKey(key, fallback){
+  const idx=CHARACTERS.findIndex(function(char){ return char.key===key; });
+  return idx>=0 ? idx : fallback;
+}
 let players=[
-  {name:'',colorIdx:4,charIdx:0},   // fighter
-  {name:'',colorIdx:0,charIdx:1},   // samurai
-  {name:'',colorIdx:3,charIdx:2},   // shinobi
+  {name:'',colorIdx:4,charIdx:characterIndexByKey('forest-ranger', 0)},
+  {name:'',colorIdx:0,charIdx:characterIndexByKey('pirate', 1)},
+  {name:'',colorIdx:3,charIdx:characterIndexByKey('anubis', 2)},
 ];
 let racers=[], finishOrder=[];
 let raceStartT=0, winnerCrossRealT=0, allDoneT=0, forceEndT=0;
@@ -573,6 +639,7 @@ function updateRacers(dt){
   if(racing&&racers.length&&finishOrder.length===racers.length&&clockT>allDoneT+1.0) endRace();
 
   racers.forEach(function(r){
+    const ch=CHARACTERS[r.p.charIdx];
     if(r.pop<1){ r.pop=Math.min(1,r.pop+dt*3); }
     var gait=1.0;
     if(racing&&!r.finished){
@@ -605,7 +672,8 @@ function updateRacers(dt){
       if(r.x<r.settleX){ r.x+=2.0*dt; gait=1.6; } else gait=0.0;
     } else { gait=0.0; }
     // animation phase
-    r.phase += Math.max(gait,0.2)*dt*3.4;
+    const paceMul=(ch.sheet && ch.sheet.paceMul) ? ch.sheet.paceMul : 1;
+    r.phase += Math.max(gait,0.2)*dt*3.4*paceMul;
     r.gait=gait;
   });
   // expire dead bananas + respawn boxes
@@ -615,7 +683,7 @@ function updateRacers(dt){
 
 /** Pixel-art mystery crate — golden box with ? glyph and soft pulse. */
 function drawPowerupBox(cx, cy, laneH, bob, spin){
-  if(powerupImage){
+  if(gameAssets.powerupImage){
     const pulse=1+0.03*Math.sin(clockT*5+spin);
     const baseSize=powerupBoxRenderSize(laneH);
     const drawW=Math.round(baseSize*pulse);
@@ -630,7 +698,7 @@ function drawPowerupBox(cx, cy, laneH, bob, spin){
 
     ctx.imageSmoothingEnabled=false;
     ctx.drawImage(
-      powerupImage,
+      gameAssets.powerupImage,
       POWERUP_IMAGE_BOUNDS.srcX,
       POWERUP_IMAGE_BOUNDS.srcY,
       POWERUP_IMAGE_BOUNDS.srcW,
@@ -728,7 +796,9 @@ function drawRacersAndItems(n){
     var frame=(r.gait>0.3)? (Math.floor(r.phase)%frameCount) : idleFrame;
     var popScale=r.pop<1? (0.4+0.6*r.pop):1;
     // vertical bob: peaks on the "pass" frames of the cycle
-    var bob=(r.gait>0.3)? Math.abs(Math.sin(r.phase*Math.PI*0.5))*Math.max(1.5, Math.min(p*1.1,m.laneH*0.08)) : 0;
+    var bobBase=Math.max(1.5, Math.min(p*1.1,m.laneH*0.08));
+    var bobMul=(ch.sheet && ch.sheet.bobMul) ? ch.sheet.bobMul : 1;
+    var bob=(r.gait>0.3)? Math.abs(Math.sin(r.phase*Math.PI*0.5))*bobBase*bobMul : 0;
     var layout=racerLayout(ch, r.i, n, popScale, bob);
     var scale=layout.scale;
     var sz=layout.size;
@@ -745,28 +815,7 @@ function drawRacersAndItems(n){
     if(r.fxT && realT-r.fxT<0.9){ var age=realT-r.fxT; ctx.globalAlpha=Math.max(0,1-age*1.1);
       ctx.fillStyle=r.fxColor||'#fff'; ctx.font='bold '+Math.round(p*5)+'px "Press Start 2P",monospace'; ctx.textAlign='center';
       ctx.fillText(r.fxText||'', sx, baseline-sz.h - age*22); ctx.globalAlpha=1; ctx.textAlign='left'; }
-    // name label (HTML-free, drawn on canvas) above racer
-    drawNameLabel(displayName(r.p,r.i), COLORS[r.p.colorIdx], sx, baseline-sz.h-8, r.i, m.laneH, layout.laneTop);
   });
-}
-
-function drawNameLabel(name,color,cx,cy,laneI,laneH,laneTop){
-  const fontSize=Math.max(10,Math.min(Math.round(PXS*3.4),Math.round(laneH*0.28)));
-  ctx.font='600 '+fontSize+'px "Jersey 10",monospace'; ctx.textBaseline='middle';
-  var tw=ctx.measureText(name).width;
-  var padX=Math.max(5,Math.round(fontSize*0.42)), dot=Math.max(6,fontSize*0.55), gap=4;
-  var w=padX*2+dot+gap+tw, h=Math.max(15,Math.round(fontSize*1.35));
-  // stagger label vertically a touch by lane parity to reduce overlap when bunched
-  var yy=Math.max(laneTop+h*0.5+2, cy - h*0.3 - (laneI%2? 0: 1));
-  var x=cx - w/2;
-  // box
-  ctx.fillStyle='rgba(44,37,28,.68)'; ctx.fillRect(Math.round(x),Math.round(yy-h/2),Math.round(w),Math.round(h));
-  ctx.fillStyle='rgba(255,255,255,.08)'; ctx.fillRect(Math.round(x),Math.round(yy-h/2),Math.round(w),1);
-  // dot
-  ctx.fillStyle=color; ctx.fillRect(Math.round(x+padX),Math.round(yy-dot/2),Math.round(dot),Math.round(dot));
-  ctx.fillStyle='rgba(61,48,24,.22)'; ctx.fillRect(Math.round(x+padX),Math.round(yy-dot/2),Math.round(dot),1);
-  // text
-  ctx.fillStyle='rgba(245,230,196,.92)'; ctx.textAlign='left'; ctx.fillText(name, Math.round(x+padX+dot+gap), Math.round(yy)+1);
 }
 
 /* ============================================================
@@ -882,14 +931,17 @@ function setSlowmo(on){ if(on===slowmoActive)return; slowmoActive=on; finishFlas
 function drawPickPreview(canvas,charIdx,color){
   const ch=CHARACTERS[charIdx];
   if(ch.sheet){
-    const img=sheetImages[ch.sheet.src];
-    const fw=ch.sheet.frameW, fh=ch.sheet.frameH;
+    const previewFrame=idleFrameFor(ch);
+    const imgSrc=spriteSourceForFrame(ch, previewFrame);
+    const img=imgSrc ? gameAssets.sheetImages[imgSrc] : null;
+    const source=spriteSourceRectForFrame(ch, previewFrame);
+    const fw=source.sw, fh=source.sh;
     const maxW=GW*3, maxH=GH*3;
     const scale=Math.min(maxW/fw, maxH/fh);
     canvas.width=Math.ceil(fw*scale);
     canvas.height=Math.ceil(fh*scale);
     const cx=canvas.getContext('2d'); cx.imageSmoothingEnabled=false; cx.clearRect(0,0,canvas.width,canvas.height);
-    if(img) cx.drawImage(img,0,0,fw,fh,0,0,canvas.width,canvas.height);
+    if(img) cx.drawImage(img,source.sx,source.sy,source.sw,source.sh,0,0,canvas.width,canvas.height);
     return;
   }
   const cell=3; canvas.width=GW*cell; canvas.height=GH*cell;
@@ -930,6 +982,8 @@ function removePlayerAt(idx){
   players.splice(idx,1);
   mobileRosterIdx=Math.max(0,Math.min(mobileRosterIdx,players.length-1));
   desktopRosterIdx=Math.max(0,Math.min(desktopRosterIdx,players.length-1));
+  buildRacers();
+  invalidateTrackMetrics();
   renderLobby();
 }
 function makePlayerEditor(p,i,mode){
@@ -1068,6 +1122,9 @@ function bindUi(){
   addBtn.addEventListener('click',function(){ if(players.length>=MAX_PLAYERS)return;
     players.push({name:'',colorIdx:freeColor(),charIdx:players.length%CHAR_COUNT});
     mobileRosterIdx=players.length-1;
+    desktopRosterIdx=players.length-1;
+    buildRacers();
+    invalidateTrackMetrics();
     renderLobby();
     const inputs=listEl.querySelectorAll('input');
     if(inputs.length){
@@ -1156,8 +1213,7 @@ function frame(now){
   if(slowmoActive){ if(finishOrder.length>0 && realT-slowmoCueT>0.45) setSlowmo(false); if(state!=='racing' && realT-winnerCrossRealT>1.0) setSlowmo(false); }
   timeScale += (target-timeScale)*Math.min(realDt*4,1);
   var dt=realDt*timeScale; clockT+=dt;
-  const revealTarget=currentSceneArtReady() ? 1 : 0;
-  lobbySceneReveal += (revealTarget-lobbySceneReveal)*Math.min(realDt*5,1);
+  updateLobbySceneReveal(sceneIdx, realDt);
   syncCanvasVisibility();
 
   if(state==='racing'||state==='countdown') updateRacers(dt);
@@ -1180,28 +1236,7 @@ export function bootGame() {
   renderLobby();
   buildRacers();
   requestAnimationFrame(frame);
-
-  // Paint the fallback lobby immediately, then stream in the active arena first.
-  loadBackgroundImages(sceneImageSources(SCENES[sceneIdx])).then(function(images){
-    Object.assign(backgroundImages, images);
-  }).catch(function(err){
-    console.error(err);
-  });
-
-  Promise.allSettled([
-    loadSpriteSheets(CHARACTERS),
-    loadBackgroundLayers(SCENES),
-    loadImage(POWERUP_ASSET_SRC),
-  ]).then(function(results){
-    if(results[0].status==='fulfilled') sheetImages=results[0].value;
-    else console.error(results[0].reason);
-
-    if(results[1].status==='fulfilled') Object.assign(backgroundImages, results[1].value);
-    else console.error(results[1].reason);
-
-    if(results[2].status==='fulfilled') powerupImage=results[2].value;
-    else console.error(results[2].reason);
-
+  preloadGameAssets(sceneIdx).then(function(){
     if(state==='lobby') renderLobby();
   });
 }

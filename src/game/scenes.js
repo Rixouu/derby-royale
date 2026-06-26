@@ -11,23 +11,38 @@ const COMMON_SCENE = {
   botRatioMobile: 0.05,
   minBottomPad: 120,
   minBottomPadMobile: 72,
+  visualLaneCount: 6,
   racerYOffset: 0,
 };
 
 function makeScene(config) {
+  const {
+    key,
+    name,
+    pickerLabel,
+    sky,
+    folder,
+    ground,
+    groundDark,
+    track,
+    laneLine,
+    trackTextureSlices,
+    ...optionalFields
+  } = config;
   return {
-    key: config.key,
-    name: config.name,
-    pickerLabel: config.pickerLabel,
-    sky: config.sky,
-    backdrop: '/background/' + config.folder + '/01-background.png',
-    trackTexture: '/background/' + config.folder + '/02-track.png',
-    trackTextureSlices: { ...TRACK_TEXTURE_SLICES },
+    key: key,
+    name: name,
+    pickerLabel: pickerLabel,
+    sky: sky,
     ...COMMON_SCENE,
-    ground: config.ground,
-    groundDark: config.groundDark,
-    track: config.track,
-    laneLine: config.laneLine,
+    ...optionalFields,
+    backdrop: '/background/' + folder + '/01-background.png',
+    trackTexture: '/background/' + folder + '/02-track.png',
+    trackTextureSlices: { ...TRACK_TEXTURE_SLICES, ...(trackTextureSlices || {}) },
+    ground: ground,
+    groundDark: groundDark,
+    track: track,
+    laneLine: laneLine,
   };
 }
 
@@ -108,6 +123,19 @@ const SCENES = [
     groundDark: '#2d6d39',
     track: '#d46843',
     laneLine: '#fff8ea',
+    hideRuntimeStartLine: true,
+    finishLineInsetTopScale: 0.4,
+    finishLineInsetBottomScale: 0.4,
+    skyRatioMobile: 0.31,
+    botRatioMobile: 0,
+    minBottomPadMobile: 0,
+    trackHeightScaleMobile: 0.78,
+    trackTextureRenderMode: 'proportional',
+    trackTextureSlices: {
+      laneSurfaceTop: 0.15,
+      laneSurfaceBottom: 0.88,
+      lowerApronTop: 0.88,
+    },
   }),
   makeScene({
     key: 'volcanic-racing',

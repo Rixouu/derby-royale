@@ -1,13 +1,6 @@
 /** Load parallax background layers referenced by SCENES[].layers */
 
-function loadImage(src) {
-  return new Promise(function (resolve, reject) {
-    const img = new Image();
-    img.onload = function () { resolve(img); };
-    img.onerror = function () { reject(new Error('Failed to load background: ' + src)); };
-    img.src = src;
-  });
-}
+import { loadImages } from './image-loader.js';
 
 export function sceneImageSources(scene) {
   const srcs = [];
@@ -21,22 +14,22 @@ export function sceneImageSources(scene) {
   return srcs;
 }
 
-export async function loadBackgroundImages(srcs) {
-  const images = {};
-  await Promise.all(srcs.map(function (src) {
-    return loadImage(src).then(function (img) { images[src] = img; });
-  }));
-  return images;
-}
-
-export async function loadBackgroundLayers(scenes) {
+export function allSceneImageSources(scenes) {
   const srcs = [];
   scenes.forEach(function (scene) {
     sceneImageSources(scene).forEach(function (src) {
       if (srcs.indexOf(src) < 0) srcs.push(src);
     });
   });
-  return loadBackgroundImages(srcs);
+  return srcs;
+}
+
+export async function loadBackgroundImages(srcs) {
+  return loadImages(srcs, 'background');
+}
+
+export async function loadBackgroundLayers(scenes) {
+  return loadBackgroundImages(allSceneImageSources(scenes));
 }
 
 /** Default parallax factor by layer index (0 = sky, slowest). */
