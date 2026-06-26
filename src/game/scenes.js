@@ -127,6 +127,8 @@ const SCENES = [
     hideRuntimeStartLine: true,
     finishLineInsetTopScale: 0.4,
     finishLineInsetBottomScale: 0.4,
+    laneCenterOffsets: [0, 0, 0, -4, -8, -14],
+    laneCenterOffsetsMobile: [0, 0, 0, -3, -6, -10],
     skyRatioMobile: 0.31,
     botRatioMobile: 0,
     minBottomPadMobile: 0,
