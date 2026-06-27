@@ -1,19 +1,27 @@
 const TRACK_TEXTURE_SLICES = {
-  laneSurfaceTop: 0,
-  laneSurfaceBottom: 0.74,
-  lowerApronTop: 0.69,
+  laneSurfaceTop: 0.225,
+  laneSurfaceBottom: 0.8,
+  lowerApronTop: 0.8,
 };
+
+const COMMON_LANE_CENTER_OFFSET_RATIOS = [0, 0, 0, -0.08, -0.16, -0.28];
 
 const COMMON_SCENE = {
   skyRatio: 0.4,
-  skyRatioMobile: 0.32,
+  skyRatioMobile: 0.31,
   botRatio: 0.16,
-  botRatioMobile: 0.05,
+  botRatioMobile: 0,
   minBottomPad: 120,
-  minBottomPadMobile: 72,
+  minBottomPadMobile: 0,
   visualLaneCount: 6,
   laneSlotMode: 'top',
+  laneCenterOffsetRatios: COMMON_LANE_CENTER_OFFSET_RATIOS,
   racerYOffset: 0,
+  hideRuntimeStartLine: true,
+  finishLineInsetTopScale: 0.4,
+  finishLineInsetBottomScale: 0.4,
+  trackHeightScaleMobile: 0.78,
+  trackTextureRenderMode: 'proportional',
 };
 
 function makeScene(config) {
@@ -124,21 +132,6 @@ const SCENES = [
     groundDark: '#2d6d39',
     track: '#d46843',
     laneLine: '#fff8ea',
-    hideRuntimeStartLine: true,
-    finishLineInsetTopScale: 0.4,
-    finishLineInsetBottomScale: 0.4,
-    laneCenterOffsets: [0, 0, 0, -4, -8, -14],
-    laneCenterOffsetsMobile: [0, 0, 0, -3, -6, -10],
-    skyRatioMobile: 0.31,
-    botRatioMobile: 0,
-    minBottomPadMobile: 0,
-    trackHeightScaleMobile: 0.78,
-    trackTextureRenderMode: 'proportional',
-    trackTextureSlices: {
-      laneSurfaceTop: 0.225,
-      laneSurfaceBottom: 0.8,
-      lowerApronTop: 0.8,
-    },
   }),
   makeScene({
     key: 'volcanic-racing',

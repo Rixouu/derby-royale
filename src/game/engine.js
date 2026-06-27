@@ -118,8 +118,14 @@ function laneFormationSlots(n){
     return clamp(Math.round(slot), 0, visualCount-1);
   });
 }
-function sceneLaneCenterOffset(slot){
+function sceneLaneCenterOffset(slot, laneH){
   const S=SCENES[sceneIdx]||{};
+  const ratioOffsets=(isPortraitMobile() && Array.isArray(S.laneCenterOffsetRatiosMobile))
+    ? S.laneCenterOffsetRatiosMobile
+    : S.laneCenterOffsetRatios;
+  if(Array.isArray(ratioOffsets)){
+    return Number(ratioOffsets[slot]||0)*laneH;
+  }
   const offsets=(isPortraitMobile() && Array.isArray(S.laneCenterOffsetsMobile))
     ? S.laneCenterOffsetsMobile
     : S.laneCenterOffsets;
@@ -129,7 +135,7 @@ function sceneLaneCenterOffset(slot){
 function laneGeometryForSlot(slot, n, centerYOverride){
   const m=trackMetrics(n);
   const clampedSlot=clamp(Math.round(slot), 0, Math.max(0, m.visualLaneCount-1));
-  const defaultCenter=m.topPad+m.laneH*(clampedSlot+0.5)+sceneLaneCenterOffset(clampedSlot);
+  const defaultCenter=m.topPad+m.laneH*(clampedSlot+0.5)+sceneLaneCenterOffset(clampedSlot, m.laneH);
   const centerY=centerYOverride==null ? defaultCenter : centerYOverride;
   return {
     slot: clampedSlot,
