@@ -13,7 +13,7 @@ The game was built by [Jonathan Rycx](https://github.com/Rixouu), who leads prod
 [![HTML5 Canvas](https://img.shields.io/badge/Canvas-2D-ff8a2b?style=flat)](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API)
 [![Vanilla JS](https://img.shields.io/badge/JavaScript-ES6+-f7df1e?style=flat&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 [![Vercel](https://img.shields.io/badge/Deploy-Vercel-000?style=flat&logo=vercel)](docs/deployment.md)
-[![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: PolyForm NC](https://img.shields.io/badge/License-PolyForm%20NC-blue.svg)](LICENSE)
 
 ## ✨ Key Features
 
@@ -185,7 +185,9 @@ Contributions are welcome.
 
 ## 📄 License
 
-[MIT License](LICENSE) — Copyright (c) 2026 Rixouu
+[PolyForm Noncommercial 1.0.0](LICENSE) — Copyright (c) 2026 Rixouu
+
+Commercial use is not permitted under this license.
 
 ## 👥 Team
 
