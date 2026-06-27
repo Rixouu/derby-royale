@@ -185,7 +185,7 @@ Contributions are welcome.
 
 ## 📄 License
 
-[PolyForm Noncommercial 1.0.0](LICENSE) — Copyright (c) 2026 Rixouu
+[PolyForm Noncommercial 1.0.0](LICENSE) — Copyright (c) 2026 Jonathan Rycx
 
 Commercial use is not permitted under this license.
 
