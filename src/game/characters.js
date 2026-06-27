@@ -51,6 +51,9 @@ const CHARACTER_ASSETS = [
   { key: 'thief', name: 'Thief', crop: { x: 189, y: 156, w: 482, h: 595 } },
   { key: 'vampire', name: 'Vampire', crop: { x: 229, y: 161, w: 428, h: 571 } },
   { key: 'white-ninja', name: 'White Ninja', crop: { x: 233, y: 160, w: 433, h: 572 } },
+  { key: 'evil-bad-guy', name: 'Evil Bad Guy', crop: { x: 276, y: 196, w: 373, h: 536 } },
+  { key: 'old-guy', name: 'Old Guy', crop: { x: 276, y: 162, w: 373, h: 570 } },
+  { key: 'monk', name: 'Monk', crop: { x: 273, y: 202, w: 372, h: 530 } },
 ];
 
 const CHARACTERS = CHARACTER_ASSETS.map(sequenceCharacter);

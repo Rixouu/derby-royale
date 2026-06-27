@@ -106,6 +106,17 @@ The scene object can also tune how the track renders and how racers sit in the v
 
 Use the exact folder slug in `folder:`. Scene buttons are generated automatically from `SCENES`, so no extra lobby markup is required.
 
+### Scene art checklist
+
+Before exporting or registering a new scene, check the current art spec:
+
+- Use **[asset-dimensions.md](./asset-dimensions.md)** for the exact background and track handoff
+- Use **[assets.md](./assets.md)** for the practical scene-pack workflow
+- Keep `01-background.png` as environment only; do not bake the track into it
+- Keep `02-track.png` as gameplay surface only with six orthographic lanes
+- Keep large landmarks, skyline elements, temples, bridges, and major architecture in the background, not the track border
+- Keep the track border minimal and landscaping-focused
+
 ### Asset loading
 
 `makeScene()` builds `backdrop` and `trackTexture` paths automatically. At runtime:

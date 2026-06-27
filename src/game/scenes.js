@@ -144,5 +144,16 @@ const SCENES = [
     track: '#8b4334',
     laneLine: '#ffe6c8',
   }),
+  makeScene({
+    key: 'bangkok-city',
+    name: 'Bangkok City',
+    pickerLabel: 'Bangkok',
+    folder: '09-bangkok-city',
+    sky: ['#0c66d1', '#a9e2ff'],
+    ground: '#2e8d76',
+    groundDark: '#1f5c4d',
+    track: '#1545c5',
+    laneLine: '#f5f8ff',
+  }),
 ];
 export { SCENES };

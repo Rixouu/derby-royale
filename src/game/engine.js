@@ -1,5 +1,5 @@
 import {
-  GW, GH, COLORS, LENGTHS, MAX_PLAYERS, FUN_NAMES,
+  GW, GH, COLORS, LENGTHS, MAX_PLAYERS,
   POWERUP_TYPES, POWERUP_COLOR, POWERUP_GLYPH,
 } from './config.js';
 import { rnd } from './color.js';
@@ -8,6 +8,17 @@ import { currentSceneArtReady, gameAssets, preloadGameAssets, updateLobbySceneRe
 import { frameCountFor, idleFrameFor, spriteScreenSize, spriteSourceForFrame, spriteSourceRectForFrame } from './sprite-sheets.js';
 import { SCENES } from './scenes.js';
 import { defaultParallax } from './backgrounds.js';
+import {
+  applyDocumentTranslations,
+  getFallbackName,
+  getLanguage,
+  getLengthCopy,
+  getSceneCopy,
+  onLanguageChange,
+  setLanguage,
+  t,
+} from './i18n.js';
+
 
 /* ---------- low-res pixel canvas ---------- */
 let view, ctx;
@@ -654,7 +665,7 @@ function drawMuteIcon(){
 }
 
 /* ---------- racer factory ---------- */
-function displayName(p,i){return (p.name||'').trim()||FUN_NAMES[i%FUN_NAMES.length];}
+function displayName(p,i){return (p.name||'').trim()||getFallbackName(i);}
 function newRacer(p,i){
   return {p:p,i:i,x:START_X,phase:rnd(0,6),pop:0,
     n1:rnd(0,6),n2:rnd(0,6),n3:rnd(0,6),
@@ -1033,12 +1044,117 @@ function viewUnits(){
    ============================================================ */
 let lobbyEl, listEl, addBtn, startBtn, restartBtn, hudEl, hudRows, countWrap, countNum, resultsEl, eventToast, finishFlash, photoTag;
 let lobbyTabBtns=[], lobbyPanels=[];
+let paintSceneSeg=function(){};
+let paintLengthSeg=function(){};
 let mobileRosterIdx=0;
 let desktopRosterIdx=0;
 
 function syncRestartButton(){
   if(!restartBtn) return;
   restartBtn.classList.toggle('hidden', state==='lobby');
+}
+function sceneDisplayName(scene){
+  const copy=getSceneCopy(scene.key);
+  return copy && copy.name ? copy.name : scene.name;
+}
+function scenePickerLabel(scene){
+  const copy=getSceneCopy(scene.key);
+  return copy && copy.pickerLabel ? copy.pickerLabel : (scene.pickerLabel || scene.name);
+}
+function updateSceneToggleLabel(activeIdx){
+  const toggle=document.getElementById('scenePickerToggle');
+  if(!toggle) return;
+  const scene=SCENES[activeIdx];
+  toggle.title=t('lobby.chooseScene');
+  toggle.setAttribute('aria-label', t('lobby.chooseScene'));
+  toggle.innerHTML='<span>'+escapeHtml(sceneDisplayName(scene))+'</span><span class="meta">'+(activeIdx+1)+' / '+SCENES.length+'</span><span class="caret" aria-hidden="true"></span>';
+}
+function renderLengthSeg(){
+  const seg=document.getElementById('lengthSeg');
+  if(!seg) return;
+  seg.innerHTML='';
+  LENGTHS.forEach(function(_, idx){
+    const lengthCopy=getLengthCopy(idx);
+    const button=document.createElement('button');
+    button.type='button';
+    button.dataset.i=String(idx);
+    button.innerHTML=escapeHtml(lengthCopy.label)+'<span class="sub">'+escapeHtml(lengthCopy.subLabel)+'</span>';
+    seg.appendChild(button);
+  });
+  paintLengthSeg();
+}
+function updateLanguageSwitcher(){
+  const switcher=document.getElementById('languageSwitch');
+  if(!switcher) return;
+  switcher.setAttribute('aria-label', t('controls.languageAria'));
+  const activeLanguage=getLanguage();
+  Array.prototype.forEach.call(switcher.querySelectorAll('[data-lang]'), function(button){
+    const active=button.dataset.lang===activeLanguage;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+}
+function applyStaticTranslations(){
+  applyDocumentTranslations();
+  const muteBtn=document.getElementById('muteBtn');
+  const lobbyTabs=document.querySelector('.lobby-tabs');
+  const powerupLabels={
+    boost:'pw-boost',
+    star:'pw-star',
+    banana:'pw-banana',
+    lightning:'pw-lightning',
+    shield:'pw-shield',
+  };
+
+  if(muteBtn){
+    muteBtn.title=t('controls.soundTitle');
+    muteBtn.setAttribute('aria-label', t('controls.soundAria'));
+  }
+  if(restartBtn){
+    restartBtn.title=t('controls.restartTitle');
+    restartBtn.setAttribute('aria-label', t('controls.restartAria'));
+  }
+  if(document.getElementById('lobbyEyebrow')) document.getElementById('lobbyEyebrow').textContent=t('lobby.eyebrow');
+  if(document.getElementById('lobbyTagline')) document.getElementById('lobbyTagline').innerHTML=t('lobby.taglineHTML');
+  if(lobbyTabs) lobbyTabs.setAttribute('aria-label', t('lobby.sectionsAria'));
+  if(document.getElementById('tab-roster')) document.getElementById('tab-roster').textContent=t('lobby.tabs.roster');
+  if(document.getElementById('tab-setup')) document.getElementById('tab-setup').textContent=t('lobby.tabs.setup');
+  if(document.getElementById('tab-rules')) document.getElementById('tab-rules').textContent=t('lobby.tabs.rules');
+  if(document.getElementById('rosterLabel')) document.getElementById('rosterLabel').textContent=t('lobby.roster.title');
+  if(document.getElementById('rosterHint')) document.getElementById('rosterHint').innerHTML=t('lobby.roster.hintHTML');
+  if(document.getElementById('rosterMobileHint')) document.getElementById('rosterMobileHint').textContent=t('lobby.roster.mobileHint');
+  if(document.getElementById('sceneLabel')) document.getElementById('sceneLabel').textContent=t('lobby.scene');
+  if(document.getElementById('raceLengthLabel')) document.getElementById('raceLengthLabel').textContent=t('lobby.raceLength');
+  if(document.getElementById('powerUpsTitle')) document.getElementById('powerUpsTitle').textContent=t('lobby.powerUpsTitle');
+  if(document.getElementById('powerUpsDesc')) document.getElementById('powerUpsDesc').textContent=t('lobby.powerUpsDesc');
+  if(document.getElementById('rulesLabel')) document.getElementById('rulesLabel').textContent=t('lobby.rules.title');
+  if(document.getElementById('rulesHint')) document.getElementById('rulesHint').textContent=t('lobby.rules.hint');
+  if(document.getElementById('rulesBody')) document.getElementById('rulesBody').innerHTML=t('lobby.rules.bodyHTML');
+  Array.prototype.forEach.call(document.querySelectorAll('[data-powerup]'), function(node){
+    const powerKey=node.getAttribute('data-powerup');
+    const iconClass=powerupLabels[powerKey];
+    if(!iconClass) return;
+    node.innerHTML='<i class="'+iconClass+'"></i> '+escapeHtml(t('powerups.'+powerKey));
+  });
+  if(startBtn) startBtn.textContent=t('lobby.startRace');
+  if(document.getElementById('lobbyFootnote')) document.getElementById('lobbyFootnote').textContent=t('lobby.footnote');
+  if(photoTag) photoTag.textContent=t('results.eyebrow').toUpperCase();
+  if(document.getElementById('hudTitle')) document.getElementById('hudTitle').textContent=t('hud.title');
+  if(document.getElementById('resultsEyebrow')) document.getElementById('resultsEyebrow').textContent=t('results.eyebrow');
+  if(document.getElementById('resultsTitle')) document.getElementById('resultsTitle').textContent=t('results.title');
+  if(document.getElementById('againBtn')) document.getElementById('againBtn').textContent=t('results.raceAgain');
+  if(document.getElementById('editBtn')) document.getElementById('editBtn').textContent=t('results.editPlayers');
+  if(document.getElementById('resultsFootnote')) document.getElementById('resultsFootnote').textContent=t('results.hydrate');
+  updateSceneToggleLabel(sceneIdx);
+  updateLanguageSwitcher();
+}
+function refreshLocalizedUi(){
+  applyStaticTranslations();
+  renderSceneSeg();
+  renderLengthSeg();
+  if(listEl) renderLobby();
+  if(state==='finished' && finishOrder.length) renderResults();
+  if(state==='racing' || state==='countdown') renderHUD();
 }
 function showLobbyTab(tab){
   lobbyTabBtns.forEach(function(btn){
@@ -1060,7 +1176,7 @@ function clearRaceTimers(){
 function startRace(){ clearRaceTimers(); resetLaneAudit(); hideToast(); setSlowmo(false); buildRacers(); spawnPowerups();
   lobbyEl.classList.add('hidden'); resultsEl.classList.add('hidden'); countWrap.classList.add('hidden'); hudEl.classList.remove('hidden'); renderHUD();
   state='countdown'; syncRestartButton(); camX=START_X-4; winnerCrossRealT=0; allDoneT=0; forceEndT=0; nextEventT=0; runCountdown(); }
-function runCountdown(){ countWrap.classList.remove('hidden'); const steps=['3','2','1','GO!']; var i=0;
+function runCountdown(){ countWrap.classList.remove('hidden'); const steps=['3','2','1',t('countdown.go')]; var i=0;
   (function step(){ countNum.textContent=steps[i]; countNum.style.animation='none'; void countNum.offsetWidth; countNum.style.animation='';
     if(i<3)sfxCount(); else sfxGo(); i++;
     if(i<steps.length){ countdownTimer=setTimeout(step,820); }
@@ -1068,17 +1184,21 @@ function runCountdown(){ countWrap.classList.remove('hidden'); const steps=['3',
 
 function endRace(){ state='finished'; syncRestartButton(); hideToast(); showResults(); setTimeout(function(){ hudEl.classList.add('hidden'); },400); }
 
-function sipInfo(place,total){ if(place===1)return {txt:'deals '+total,cls:'give'}; if(place===total)return {txt:(total+1)+' · chug',cls:'chug'}; return {txt:place+' sips',cls:''}; }
+function sipInfo(place,total){ if(place===1)return {txt:t('results.sipGive',{ total: total }),cls:'give'}; if(place===total)return {txt:t('results.sipChug',{ total: total+1 }),cls:'chug'}; return {txt:t('results.sipCount',{ place: place }),cls:''}; }
 function escapeHtml(s){return (''+s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
-function showResults(){ const total=racers.length, w=finishOrder[0];
-  document.getElementById('resSub').textContent=displayName(w.p,w.i)+' won in '+w.finishT.toFixed(1)+'s';
+function renderResults(){ const total=racers.length, w=finishOrder[0];
+  if(!w) return;
+  document.getElementById('resSub').textContent=t('results.wonIn',{ name: displayName(w.p,w.i), time: w.finishT.toFixed(1) });
   const rowsEl=document.getElementById('resRows'); rowsEl.innerHTML=''; const medals=['1','2','3'];
   finishOrder.forEach(function(r,i){ var place=i+1, info=sipInfo(place,total), slow=r.neverLedFlag;
     var row=document.createElement('div'); row.className='res-row'+(place===1?' first':'');
     row.innerHTML='<div class="res-medal">'+(medals[i]||(place+'.'))+'</div><div class="res-dot" style="background:'+COLORS[r.p.colorIdx]+'"></div><div class="res-name">'+escapeHtml(displayName(r.p,r.i))+'</div><div class="res-sips '+info.cls+'">'+info.txt+(slow?' +1':'')+'</div>';
     rowsEl.appendChild(row); });
   const slow=finishOrder.filter(function(r){return r.neverLedFlag;}), noteEl=document.getElementById('resNote');
-  noteEl.innerHTML=slow.length?('<b>Slowpoke clause:</b> '+slow.map(function(r){return escapeHtml(displayName(r.p,r.i));}).join(', ')+' never led — +1 sip of shame.'):'Everyone led at some point — a civilised race. No shame sips today.';
+  noteEl.innerHTML=slow.length?('<b>'+escapeHtml(t('results.slowpokeTitle'))+'</b> '+escapeHtml(t('results.slowpokeNote',{ names: slow.map(function(r){return displayName(r.p,r.i);}).join(', ') }))):escapeHtml(t('results.everyoneLed'));
+}
+function showResults(){
+  renderResults();
   resultsTimer=setTimeout(function(){ resultsEl.classList.remove('hidden'); },800); }
 
 /* ---------- HUD ---------- */
@@ -1092,12 +1212,12 @@ function showToast(txt){ eventToast.textContent=txt; eventToast.classList.add('s
 function hideToast(){ eventToast.classList.remove('show'); }
 function fireEvent(){ const sorted=racers.slice().filter(function(r){return !r.finished;}).sort(function(a,b){return b.x-a.x;}); if(!sorted.length)return;
   const leader=sorted[0], last=sorted[sorted.length-1];
-  const tpl=[ function(){return leader?('🍺 '+displayName(leader.p,leader.i)+' leads — everyone else sips!'):''; },
-    function(){return last?('🐌 '+displayName(last.p,last.i)+' is last… drink up!'):''; },
-    function(){return 'Cheers! Everyone clink and sip together.'; },
-    function(){return 'Last to raise their drink takes two!'; },
-    function(){return leader?(displayName(leader.p,leader.i)+"'s player picks someone to drink."):''; },
-    function(){return 'Power-up holders: sip when it wears off!'; } ];
+  const tpl=[ function(){return leader?t('toasts.leader',{ name: displayName(leader.p,leader.i) }):''; },
+    function(){return last?t('toasts.last',{ name: displayName(last.p,last.i) }):''; },
+    function(){return t('toasts.cheers'); },
+    function(){return t('toasts.lastToRaise'); },
+    function(){return leader?t('toasts.leaderPicks',{ name: displayName(leader.p,leader.i) }):''; },
+    function(){return t('toasts.powerupHolders'); } ];
   var idx; do{ idx=Math.floor(Math.random()*tpl.length); }while(idx===lastEventIdx&&tpl.length>1); lastEventIdx=idx; showToast(tpl[idx]()); }
 
 /* ---------- slow-mo / photo finish ---------- */
@@ -1131,20 +1251,17 @@ function drawPickPreview(canvas,charIdx,color){
 }
 function renderSceneSeg(){
   const seg=document.getElementById('sceneSeg');
-  const toggle=document.getElementById('scenePickerToggle');
   seg.innerHTML='';
   SCENES.forEach(function(scene, idx){
     const button=document.createElement('button');
     button.type='button';
     button.dataset.i=String(idx);
-    button.title=scene.name;
-    button.textContent=scene.pickerLabel || scene.name;
+    button.title=sceneDisplayName(scene);
+    button.textContent=scenePickerLabel(scene);
     seg.appendChild(button);
   });
-  if(toggle){
-    const scene=SCENES[sceneIdx];
-    toggle.innerHTML='<span>'+(scene.name)+'</span><span class="meta">'+(sceneIdx+1)+' / '+SCENES.length+'</span><span class="caret" aria-hidden="true"></span>';
-  }
+  updateSceneToggleLabel(sceneIdx);
+  paintSceneSeg();
 }
 function freeColor(){ const used=players.map(function(p){return p.colorIdx;}); for(let i=0;i<COLORS.length;i++) if(used.indexOf(i)<0)return i; return Math.floor(Math.random()*COLORS.length); }
 function nextFreeColor(from){ const used=players.map(function(p){return p.colorIdx;}); for(let k=1;k<=COLORS.length;k++){ const i=(from+k)%COLORS.length; if(used.indexOf(i)<0)return i; } return (from+1)%COLORS.length; }
@@ -1170,19 +1287,19 @@ function makePlayerEditor(p,i,mode){
   const mobile=mode==='mobile';
   const desktop=mode==='desktop';
   const row=document.createElement('div'); row.className='player-row'+(mobile?' player-row-mobile':desktop?' player-row-desktop':'');
-  const sw=document.createElement('div'); sw.className='swatch'; sw.style.background=COLORS[p.colorIdx]; sw.title='Colour';
-  const pick=document.createElement('button'); pick.className='pick'; pick.title='Change racer';
+  const sw=document.createElement('div'); sw.className='swatch'; sw.style.background=COLORS[p.colorIdx]; sw.title=t('player.colorTitle');
+  const pick=document.createElement('button'); pick.className='pick'; pick.title=t('player.changeRacerTitle');
   const pc=document.createElement('canvas'); pick.appendChild(pc); drawPickPreview(pc,p.charIdx,COLORS[p.colorIdx]);
   sw.addEventListener('click',function(){ p.colorIdx=nextFreeColor(p.colorIdx); sw.style.background=COLORS[p.colorIdx]; drawPickPreview(pc,p.charIdx,COLORS[p.colorIdx]); });
   pick.addEventListener('click',function(){ p.charIdx=(p.charIdx+1)%CHAR_COUNT; drawPickPreview(pc,p.charIdx,COLORS[p.colorIdx]); });
-  const input=document.createElement('input'); input.maxLength=14; input.placeholder=FUN_NAMES[i%FUN_NAMES.length]; input.value=p.name;
+  const input=document.createElement('input'); input.maxLength=14; input.placeholder=getFallbackName(i); input.value=p.name;
   input.addEventListener('input',function(){ p.name=input.value; });
   if(mobile){
     const head=document.createElement('div'); head.className='player-mobile-head';
-    const title=document.createElement('div'); title.className='player-mobile-title'; title.textContent='Racer '+(i+1);
+    const title=document.createElement('div'); title.className='player-mobile-title'; title.textContent=t('player.racerLabel',{ num: i+1 });
     head.appendChild(title);
     if(players.length>2){
-      const rm=document.createElement('button'); rm.className='remove'; rm.textContent='X'; rm.title='Remove';
+      const rm=document.createElement('button'); rm.className='remove'; rm.textContent='X'; rm.title=t('player.removeTitle');
       rm.addEventListener('click',function(){ removePlayerAt(i); });
       head.appendChild(rm);
     }
@@ -1193,10 +1310,10 @@ function makePlayerEditor(p,i,mode){
   }
   if(desktop){
     const head=document.createElement('div'); head.className='player-desktop-head';
-    const title=document.createElement('div'); title.className='player-desktop-title'; title.textContent='Racer '+(i+1);
+    const title=document.createElement('div'); title.className='player-desktop-title'; title.textContent=t('player.racerLabel',{ num: i+1 });
     head.appendChild(title);
     if(players.length>2){
-      const rm=document.createElement('button'); rm.className='remove'; rm.textContent='X'; rm.title='Remove';
+      const rm=document.createElement('button'); rm.className='remove'; rm.textContent='X'; rm.title=t('player.removeTitle');
       rm.addEventListener('click',function(){ removePlayerAt(i); });
       head.appendChild(rm);
     }
@@ -1207,7 +1324,7 @@ function makePlayerEditor(p,i,mode){
   }
   row.appendChild(sw); row.appendChild(pick); row.appendChild(input);
   if(players.length>2){
-    const rm=document.createElement('button'); rm.className='remove'; rm.textContent='X'; rm.title='Remove';
+    const rm=document.createElement('button'); rm.className='remove'; rm.textContent='X'; rm.title=t('player.removeTitle');
     rm.addEventListener('click',function(){ removePlayerAt(i); });
     row.appendChild(rm);
   }
@@ -1237,7 +1354,7 @@ function renderLobby(){ listEl.innerHTML='';
       const slot=document.createElement('button');
       slot.type='button';
       slot.className='player-desktop-slot'+(i===desktopRosterIdx?' active':'');
-      slot.innerHTML='<span class="player-desktop-slot-dot" style="background:'+COLORS[p.colorIdx]+'"></span><span class="player-desktop-slot-copy"><span class="player-desktop-slot-num">RACER '+(i+1)+'</span><span class="player-desktop-slot-name">'+escapeHtml(displayName(p,i))+'</span></span>';
+      slot.innerHTML='<span class="player-desktop-slot-dot" style="background:'+COLORS[p.colorIdx]+'"></span><span class="player-desktop-slot-copy"><span class="player-desktop-slot-num">'+escapeHtml(t('player.racerSlot',{ num: i+1 }))+'</span><span class="player-desktop-slot-name">'+escapeHtml(displayName(p,i))+'</span></span>';
       slot.title=displayName(p,i);
       slot.addEventListener('click',function(){ desktopRosterIdx=i; renderLobby(); });
       tabs.appendChild(slot);
@@ -1245,7 +1362,9 @@ function renderLobby(){ listEl.innerHTML='';
     listEl.appendChild(tabs);
     listEl.appendChild(makePlayerEditor(activePlayer,desktopRosterIdx,'desktop'));
   }
-  addBtn.textContent=players.length>=MAX_PLAYERS?('ROSTER FULL ('+MAX_PLAYERS+')'):('+ ADD PLAYER  ·  '+players.length+'/'+MAX_PLAYERS);
+  addBtn.textContent=players.length>=MAX_PLAYERS
+    ? t('lobby.rosterFull',{ max: MAX_PLAYERS })
+    : t('lobby.addPlayer',{ count: players.length, max: MAX_PLAYERS });
   addBtn.disabled=players.length>=MAX_PLAYERS; addBtn.style.opacity=addBtn.disabled?0.5:1;
 }
 
@@ -1291,6 +1410,11 @@ function bindUi(){
   photoTag=document.getElementById('photoTag');
   lobbyTabBtns=Array.prototype.slice.call(document.querySelectorAll('.lobby-tab'));
   lobbyPanels=Array.prototype.slice.call(document.querySelectorAll('.lobby-panel'));
+  Array.prototype.forEach.call(document.querySelectorAll('#languageSwitch [data-lang]'), function(button){
+    button.addEventListener('click', function(){
+      setLanguage(button.dataset.lang);
+    });
+  });
 
   document.getElementById('againBtn').addEventListener('click',function(){ resultsEl.classList.add('hidden'); startRace(); });
   document.getElementById('editBtn').addEventListener('click',function(){ clearRaceTimers(); resultsEl.classList.add('hidden'); countWrap.classList.add('hidden'); state='lobby'; syncRestartButton(); hudEl.classList.add('hidden'); buildRacers(); renderLobby(); lobbyEl.classList.remove('hidden'); });
@@ -1314,12 +1438,12 @@ function bindUi(){
   });
 
   renderSceneSeg();
+  renderLengthSeg();
   const sceneSeg=document.getElementById('sceneSeg');
   const sceneToggle=document.getElementById('scenePickerToggle');
-  const paintScene=wireSeg('sceneSeg',function(){return sceneIdx;},function(i){sceneIdx=i; invalidateTrackMetrics();},function(activeIdx){
+  paintSceneSeg=wireSeg('sceneSeg',function(){return sceneIdx;},function(i){sceneIdx=i; invalidateTrackMetrics();},function(activeIdx){
     if(sceneToggle){
-      const scene=SCENES[activeIdx];
-      sceneToggle.innerHTML='<span>'+(scene.name)+'</span><span class="meta">'+(activeIdx+1)+' / '+SCENES.length+'</span><span class="caret" aria-hidden="true"></span>';
+      updateSceneToggleLabel(activeIdx);
       sceneSeg.classList.remove('open');
       sceneToggle.setAttribute('aria-expanded','false');
     }
@@ -1331,9 +1455,10 @@ function bindUi(){
       sceneToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
   }
-  wireSeg('lengthSeg',function(){return lengthIdx;},function(i){lengthIdx=i; START_X=LENGTHS[i].start; FINISH_X=LENGTHS[i].finish;});
+  paintLengthSeg=wireSeg('lengthSeg',function(){return lengthIdx;},function(i){lengthIdx=i; START_X=LENGTHS[i].start; FINISH_X=LENGTHS[i].finish;});
   document.getElementById('powerToggle').addEventListener('change',function(e){ powerUpsOn=e.target.checked; });
   startBtn.addEventListener('click',function(){ if(state!=='lobby')return; ac(); players.forEach(function(p,i){ p.name=displayName(p,i); }); startRace(); });
+  applyStaticTranslations();
   showLobbyTab('roster');
   syncRestartButton();
 }
@@ -1414,6 +1539,8 @@ function frame(now){
 }
 
 export function bootGame() {
+  onLanguageChange(refreshLocalizedUi);
+  applyDocumentTranslations();
   bindUi();
   installDebugTools();
   renderLobby();

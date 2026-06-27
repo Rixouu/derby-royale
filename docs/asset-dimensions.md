@@ -1,8 +1,11 @@
 # Pixel Olympics Asset Dimensions
 
-This file is the art handoff for the current scene-pack system.
+This file is the current art handoff for the scene-pack system.
 
-The previous background recommendations of `2560 x 1440` and later `3200 x 1600` were wrong for the current one-file background workflow. The corrected background size for the current renderer is `3200 x 1100`.
+Each scene uses two separate assets with different responsibilities:
+
+- `01-background.png` = stadium environment only
+- `02-track.png` = gameplay surface only
 
 ## Scene pack structure
 
@@ -22,56 +25,189 @@ Current examples:
 08-sky-kingdom
 ```
 
-## Recommended dimensions
+## Scene pack spec
 
 ### 01-background.png
 
-- Purpose: skyline, stadium, mountains, city, distant audience, clouds, scoreboards behind the track
-- Recommended size: `3200 x 1100`
-- Aspect ratio: about `2.91:1`
-- Good higher-res option: `3840 x 1280`
-- Absolute minimum: `2560 x 880`
-- Best practice: compose this as a wide scene banner for the current desktop-first layout
-- Do not use `2560 x 1440`
-- Do not use `3200 x 1600`
+- Asset: environment background
+- Dimensions: `2138 x 736`
+- Format: lossless PNG
+- Camera: fixed wide panoramic
+- Projection: `2.5D` pixel art
+- Transparency: none
+- Looping: no
+- Purpose: panoramic stadium environment used behind the race track
+
+The background should include:
+
+- complete environment
+- skyline / mountains / city / river
+- stadium architecture
+- scoreboards
+- banners
+- lighting
+- decorative set dressing
+
+The background must never contain the running track. The bottom edge should finish exactly where the separate track asset begins.
 
 ### 02-track.png
 
-- Purpose: lane surface and lower apron directly behind the racers
-- Recommended size: `2560 x 960`
-- Aspect ratio: `8:3`
-- Minimum size: `1920 x 720`
-- Notes:
-  - Top `70%` to `75%` should contain the visible lane surface
-  - Bottom `25%` to `30%` should contain the lower apron / curb / near-track detail
-  - Keep the art fully opaque
+- Asset: race track
+- Dimensions: `2048 x 768`
+- Format: PNG
+- Camera: top-down
+- Projection: orthographic
+- Transparency: none
+- Lanes: exactly `6`
+- Purpose: gameplay surface only
 
-## Safe composition rules
+Track layout:
 
-These matter more than raw pixel size.
+- top decorative border
+- LED strip
+- track play area
+- `6` equal lanes
+- LED strip
+- bottom decorative border
 
-### Background safe area
+Lane specification:
 
-- Keep the main skyline / stadium / mountain shapes in the top `18%` to `72%` of the image
-- Keep important focal elements inside the center `60%` of the width
-- Leave the outer left and right `20%` expendable
-- Keep the bottom `12%` free of tiny critical details
-- Do not rely on thin signage text near the far edges
+- exactly `6` lanes
+- equal lane height
+- white lane separators
+- left lane numbers
+- consistent lane spacing
+- no perspective
 
-### Track safe area
+Border height guidance:
 
-- Keep lane markings, run direction, and race-surface texture clear and readable
-- Avoid decorative elements that cross horizontally into racer silhouettes
-- If using perspective details, keep them subtle so lane motion does not look warped
+- top decorative border: about `110 px`
+- bottom decorative border: about `110 px`
+- track play area: about `548 px`
+
+## Background safe area
+
+- Top `75%`
+  - sky
+  - landmarks
+  - city
+  - mountains
+- Bottom `25%`
+  - stadium
+  - scoreboards
+  - railings
+  - entrance
+
+No gameplay elements should overlap outside the stadium area.
+
+## Background design rules
+
+- fixed perspective
+- no visible horizon movement
+- symmetrical composition
+- bright daylight
+- strong focal point in the center
+- pixel-art style
+- consistent lighting
+- clean negative space above the skyline
+
+Theme examples:
+
+- Alpine Summit
+- Bangkok
+- Volcano Racing
+- Space Colony
+- Sky Kingdom
+- Desert
+- Sakura Garden
+- Cyber City
+
+## Track theme rules
+
+The track surface should change depending on the environment.
+
+Examples:
+
+- Alpine: blue
+- Bangkok: slight teal-blue asphalt with warm reflections and urban texture
+- Volcano: dark basalt with lava glow
+- Space Colony: cyan metallic
+- Sky Kingdom: bright sky blue
+- Desert: sandy orange
+
+## Border design rules
+
+Borders should remain minimal. They should feel like landscaping beside the race instead of large decorative scenes.
+
+- Maximum height: about `110 px`
+
+Good border examples:
+
+- tropical plants
+- Thai flowers
+- palms
+- stone curb
+- LED lights
+- road drainage
+- sidewalks
+- flower beds
+
+Avoid:
+
+- buildings
+- temples
+- large statues
+- bridges
+- skylines
+- huge trees
+
+Those belong in the background asset, not the track.
+
+## Bangkok track style
+
+Track surface:
+
+- rich royal blue with a slight teal tint to match the Chao Phraya River
+- subtle asphalt texture
+- soft sun highlights
+- white lane markings
+
+Border:
+
+- clean stone sidewalk
+- red / white Thai curb sections used sparingly
+- drainage channel
+- blue LED strip
+- low tropical hedges
+- heliconia
+- bird of paradise
+- white jasmine
+- pink bougainvillea
+- small palms
+- elephant ear plants
+- no buildings
+- no temples
+- no skyline
+
+The Bangkok border should read as "Bangkok streetscape landscaping", not "tourist Bangkok".
+
+## Asset relationship
+
+Use this relationship consistently:
+
+| Asset | Purpose | Size |
+| ----- | ------- | ---- |
+| Background | Stadium environment only | `2138 x 736` |
+| Track | Gameplay surface only | `2048 x 768` |
 
 ## Current scene workflow
 
 Use this set for the current renderer:
 
-- `01-background.png`: `3200 x 1100`
-- `02-track.png`: `2560 x 960`
+- `01-background.png`: `2138 x 736`
+- `02-track.png`: `2048 x 768`
 
-If separate desktop/mobile backgrounds are added later, document that when the renderer actually supports them as a standard scene format. They are not the current default.
+If separate desktop/mobile scene packs are introduced later, document that only when the renderer officially supports them.
 
 ## Character sprite frames
 
@@ -116,6 +252,7 @@ These are not part of a scene pack, but useful as a reference.
 - Keep filenames lowercase and exact
 - Keep scene folder names lowercase and exact; the current convention is `NN-scene-name`
 - Do not bake the track into the background
+- Do not put skyline, buildings, temples, bridges, or other large landmarks into the track borders
 - Keep transparency only where it is needed, mainly on sprite sheets
 - Avoid heavy blur because the game art reads best with crisp shapes
 
@@ -124,8 +261,8 @@ These are not part of a scene pack, but useful as a reference.
 If you want one exact spec to give an artist, use this:
 
 ```txt
-01-background.png            3200 x 1100 PNG
-02-track.png                 2560 x 960  PNG
+01-background.png            2138 x 736  PNG
+02-track.png                 2048 x 768  PNG
 Running_000.png ... 011.png  consistent PNG source size, transparent
 power-up.png                 256 x 256   PNG with transparency
 ```

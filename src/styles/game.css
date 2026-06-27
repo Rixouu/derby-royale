@@ -21,6 +21,11 @@
   .lobby-card{width:min(520px,96vw)}
   .card::before{content:'';position:absolute;inset:4px;border:2px solid rgba(61,48,24,.1);pointer-events:none}
   .eyebrow{font-family:'Press Start 2P',monospace;font-size:9px;letter-spacing:1px;color:var(--good);text-align:center;text-transform:uppercase}
+  .lobby-topbar{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-bottom:8px}
+  .lang-switch{display:inline-flex;align-items:center;gap:4px;background:var(--panel2);border:3px solid var(--line);padding:3px}
+  .lang-btn{border:none;background:transparent;color:var(--ink);cursor:pointer;font-family:'Press Start 2P',monospace;
+    font-size:8px;line-height:1;padding:7px 8px;min-width:38px}
+  .lang-btn.active{background:var(--acc);color:#fff;box-shadow:inset -2px -2px 0 rgba(61,48,24,.18)}
   h1{font-family:'Press Start 2P',monospace;font-size:clamp(18px,6vw,26px);line-height:1.25;text-align:center;
     margin:10px 0 6px;color:var(--hi);text-shadow:3px 3px 0 var(--hi2),6px 6px 0 var(--line)}
   .tagline{font-size:20px;line-height:1.05;text-align:center;color:var(--dim);margin-bottom:12px}
@@ -225,6 +230,8 @@
   }
   @media (max-width:620px){
     .lobby-card{width:min(calc(100vw - 12px),100vw);padding:14px 12px 12px}
+    .lobby-topbar{justify-content:center;margin-bottom:6px}
+    .lang-switch{justify-content:center}
     .lobby-tabs{grid-template-columns:1fr;gap:5px}
     .lobby-tab{font-size:8px;padding:9px 6px}
     .lobby-panels{padding:9px 8px 7px;min-height:0}

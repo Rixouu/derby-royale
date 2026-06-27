@@ -138,16 +138,33 @@ URL pattern in code:
 | ----------- | ------ |
 | **Format** | PNG |
 | **Layout** | One background file and one track file per scene |
-| **Background size** | See [asset-dimensions.md](./asset-dimensions.md); current target is `3200 x 1100` |
-| **Track size** | Recommended `2560 x 960` |
+| **Background size** | See [asset-dimensions.md](./asset-dimensions.md); current target is `2138 x 736` |
+| **Track size** | Current target is `2048 x 768` |
 | **Folder naming** | Use the exact slug from `scenes.js`, usually `NN-scene-name` |
 
 ### What each file does
 
 | File | Purpose |
 | ---- | ------- |
-| `01-background.png` | Sky, crowd, mountains, buildings, and distant set dressing |
-| `02-track.png` | Lane surface, lane markings, finish-area art, and lower apron detail |
+| `01-background.png` | Stadium environment only: skyline, mountains, river, scoreboards, architecture, and distant set dressing |
+| `02-track.png` | Gameplay surface only: six lanes, lane markings, LED strips, and minimal landscaped borders |
+
+### Background / track relationship
+
+- `01-background.png` must never include the running track
+- The bottom edge of the background should finish exactly where the track begins
+- `02-track.png` should stay orthographic and gameplay-first
+- Large landmarks, temples, bridges, skylines, and buildings belong in the background, not the track border
+- Track borders should read as landscaping beside the race, not a second environment scene
+
+### Bangkok guidance
+
+For Bangkok specifically:
+
+- background: use the environment asset for skyline, river, stadium framing, and city landmarks
+- track surface: rich royal blue with a slight teal tint, subtle asphalt texture, soft sun highlights, and white lane markings
+- border: use low Bangkok streetscape landscaping such as sidewalks, drainage, Thai curb accents, LED strips, hedges, palms, heliconia, jasmine, bougainvillea, and elephant ear plants
+- avoid tourist-scene elements in the track border such as temples, buildings, statues, bridges, or skyline silhouettes
 
 ### Register scene in code
 
@@ -187,7 +204,9 @@ Use them when new art changes lane geometry or the visible apron size.
 
 - [ ] `01-background.png` and `02-track.png` exist under `public/background/<scene-folder>/`
 - [ ] Background and track use the current size guidance from [asset-dimensions.md](./asset-dimensions.md)
+- [ ] Background contains environment only and stops cleanly where the separate track begins
 - [ ] Track art keeps racers readable and aligned to visible lanes
+- [ ] Track border stays minimal and does not contain skyline-scale scenery
 - [ ] Start and finish remain readable
 - [ ] `pnpm dev` and verify the scene in the lobby plus live race on desktop and portrait mobile
 
