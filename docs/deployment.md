@@ -22,7 +22,9 @@ Connect the GitHub repo [Rixouu/pixel-olympics](https://github.com/Rixouu/pixel-
 | `dist/assets/*.js` | Bundled game (engine, characters, scenes chunks) |
 | `dist/assets/*.css` | Styles + font `@font-face` rules |
 | `dist/fonts/*.woff2` | Self-hosted Press Start 2P & Jersey 10 |
-| `dist/favicon.*`, `og-image.png`, etc. | Copied from `public/` |
+| `dist/favicon.*`, `og-image.png`, install icons, etc. | Copied from `public/` |
+| `dist/site.webmanifest` | Web app manifest |
+| `dist/sw.js` | Service worker for cached shell assets |
 
 Redirect helpers: `public/derby-royale.html` and `public/pixel-olympics.html` → `/`
 
@@ -55,6 +57,18 @@ Production meta tags point to:
 - **Site:** `https://pixel-olympics.vercel.app/`
 - **Image:** `https://pixel-olympics.vercel.app/og-image.png`
 
+## Web app assets
+
+The app also ships:
+
+- `site.webmanifest`
+- `sw.js`
+- `apple-touch-icon.png`
+- `android-chrome-192x192*.png`
+- `android-chrome-512x512*.png`
+
+These files are referenced from `index.html`, `src/main.js`, and `public/sw.js`, so keep their filenames stable unless you update the code too.
+
 ## Headers & caching (`vercel.json`)
 
 - Security headers on all routes
@@ -72,6 +86,7 @@ Vercel dashboard → **Deployments** → previous deployment → **Promote to Pr
 - [ ] Build succeeds (`pnpm build` locally first)
 - [ ] `/` loads the lobby
 - [ ] Fonts render (no Google Fonts network call)
+- [ ] Manifest and service worker load without 404s
 - [ ] `/derby-royale.html` redirects to `/`
 - [ ] `/pixel-olympics.html` redirects to `/`
 - [ ] `/play` serves the game

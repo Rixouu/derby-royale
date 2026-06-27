@@ -18,13 +18,13 @@ The game was built by [Jonathan Rycx](https://github.com/Rixouu), who leads prod
 ### 🏎️ Pixel-art race
 
 - Side-on race, left → right, with **photo finish** and live standings HUD.
-- **PNG sprite racers** — Fighter, Samurai, Shinobi, Naia, Ninja (horizontal run sheets in `public/sprites/`)
+- **15 PNG-sequence racers** in `public/sprites/` — Forest Ranger, Pirate, Anubis, Assassin, Black Ninja, Egyptian Mummy, Egyptian Sentry, Jungle Master, Pumpkin Head, Robin Hood, Rogue, Skull Night, Thief, Vampire, White Ninja
 - Each player gets a **custom colour** (UI swatch) and **character picker** in the lobby.
 
 ### 🌍 Scenes & atmosphere
 
 - **8 scene packs**: Sky Kingdom, Mountain Valley, Ancient Greek, Desert Grand Prix, Neo Tokyo, Space Colony, Tropical Island, Volcanic Racing.
-- Each scene uses layered **background + track** art for a more bespoke look.
+- Each scene uses a bespoke **background + track** scene pack.
 - **3 race lengths**: Sprint (quick), Classic (balanced), Marathon (epic).
 
 ### ⚡ Power-ups (optional)
@@ -39,7 +39,7 @@ All pickups currently share the same `question-box` asset in `public/power/power
 | Star | Speed + immunity |
 | Banana | Drop a trap behind you |
 | Lightning | Slow racers ahead |
-| Bubble | Block one hit |
+| Shield | Block one hit |
 
 ### 🍻 Drinking rules
 
@@ -110,19 +110,25 @@ pixel-olympics/
 │   │   ├── fonts.css       # Self-hosted @font-face
 │   │   └── game.css        # UI + overlay styles
 │   └── game/
+│       ├── assets.js       # Asset preload + lobby scene reveal
+│       ├── backgrounds.js  # Scene image source helpers
 │       ├── config.js       # Constants (colors, lengths, power-ups)
 │       ├── color.js        # Color helpers
-│       ├── palette.js      # Sprite palette roles
-│       ├── characters.js   # Racer sprites ← edit to add characters
-│       ├── scenes.js       # Scene registry ← edit to add scene packs
-│       └── engine.js       # Canvas, race sim, UI, main loop
+│       ├── characters.js   # Racer registry + sprite crop data
+│       ├── engine.js       # Canvas, race sim, UI, lane alignment, main loop
+│       ├── image-loader.js # Shared image request cache
+│       ├── palette.js      # Sprite palette helpers
+│       ├── scenes.js       # Scene registry + track layout tuning
+│       └── sprite-sheets.js# Sprite frame loading + source rect helpers
 ├── public/
 │   ├── background/         # Scene packs (background + track)
 │   ├── fonts/              # WOFF2 font files
 │   ├── power/              # Shared power-up artwork
+│   ├── sprites/            # Character frame sequences
 │   ├── favicon.svg
 │   ├── og-image.png
-│   └── site.webmanifest
+│   ├── site.webmanifest
+│   └── sw.js
 ├── docs/
 ├── vite.config.js
 ├── package.json
@@ -143,12 +149,15 @@ Expand **How to play & power-ups** in the lobby for the in-game rule card.
 ## 🌟 Implementation Notes
 
 - **Extending characters / scenes**: see **[docs/extending.md](docs/extending.md)**.
-- **Sprite cache**: characters are pre-rendered to offscreen canvases per colour/frame.
-- **Lane model**: each player gets a dedicated lane; the camera tracks the race leader.
+- **Character assets**: racers load from numbered PNG sequences (`Running_000.png` ... `Running_011.png`) with crop metadata in `src/game/characters.js`.
+- **Lane model**: scenes define explicit lane geometry and top-slot formation so 1..N racers occupy the correct visible lanes from the top.
+- **Track layout**: track textures render proportionally, with scene-specific lane offsets and mobile height tuning to avoid squeezed tracks or oversized lower aprons.
+- **Asset loading**: the lobby keeps the main canvas hidden until the active scene art is ready, then reveals the real background and track.
 
 ## 🔐 Privacy & Security
 
-- **No accounts**, analytics, or network calls during gameplay.
+- **No accounts** or third-party analytics.
+- Core gameplay runs locally in the browser.
 - **Self-hosted fonts** — no Google Fonts CDN at runtime.
 - **No data persistence** — refresh the page to reset the lobby.
 - Security headers configured in `vercel.json`.

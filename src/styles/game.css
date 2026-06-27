@@ -110,7 +110,7 @@
   .pw-star{background:#fff}
   .pw-banana{background:#ffe14d}
   .pw-lightning{background:#7df}
-  .pw-bubble{background:#9fe8ff}
+  .pw-shield{background:#9fe8ff}
   .footnote{margin-top:12px;text-align:center;font-size:15px;color:var(--dim)}
   /* ---------- HUD ---------- */
   #hud{position:fixed;top:10px;right:10px;z-index:9;pointer-events:none;background:var(--panel);

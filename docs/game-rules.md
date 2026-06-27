@@ -2,7 +2,7 @@
 
 Pixel Olympics is a **party drinking game** layered on a random pixel-art race. The game calculates sip counts on the results screen — agree on house rules before you start.
 
-**18+ · Drink responsibly · Water counts too**
+> 18+ · Drink responsibly · Water counts too
 
 ## Setup
 
@@ -44,19 +44,19 @@ After the photo finish, the results screen assigns drinks:
 Power-ups are random pickups during the race. They affect the simulation only — not sip math directly — but the results screen may show optional party prompts (e.g. “power-up holders sip when it wears off”).
 
 | Power-up | Effect |
-|----------|--------|
+| -------- | ------ |
 | **Boost** | Short burst of speed |
 | **Star** | Speed boost + immunity to traps/hits |
 | **Banana** | Drop a trap; others spin when hit |
 | **Lightning** | Slow racers ahead of you |
-| **Bubble (shield)** | Block one hit, then breaks |
+| **Shield** | Block one hit, then breaks |
 
 Turn power-ups **off** for a simpler “pure luck” race.
 
 ## Race length
 
 | Mode | Feel |
-|------|------|
+| ---- | ---- |
 | **Sprint** | Quick rounds, good for warm-up |
 | **Classic** | Balanced default |
 | **Marathon** | Longer race, more power-up chaos |

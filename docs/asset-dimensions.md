@@ -73,18 +73,18 @@ Use this set for the current renderer:
 
 If separate desktop/mobile backgrounds are added later, document that when the renderer actually supports them as a standard scene format. They are not the current default.
 
-## Character sprite sheets
+## Character sprite frames
 
-### `run.png`
+### `Running_000.png` ... `Running_011.png`
 
 - Purpose: racer run cycle
-- Recommended frame size: `128 x 128`
-- Recommended frame count: `8`
-- Recommended sheet size: `1024 x 128`
+- Current project format: `12` numbered PNG files per character
 - Format: transparent PNG
 - Direction: character faces right
+- Source canvas: keep every frame exported at the same size
+- Crop workflow: the engine uses `crop.x`, `crop.y`, `crop.w`, and `crop.h` from `src/game/characters.js` to isolate the visible sprite area
 
-Custom sprite sheets are supported, but this is the current baseline that matches bundled racers.
+There is no single shared frame size baked into the engine. Measure the real art you export, then set the matching crop rectangle in `characters.js`.
 
 ## Shared power-up asset
 
@@ -124,10 +124,10 @@ These are not part of a scene pack, but useful as a reference.
 If you want one exact spec to give an artist, use this:
 
 ```txt
-01-background.png   3200 x 1100 PNG
-02-track.png        2560 x 960  PNG
-run.png             1024 x 128  PNG with transparency, 8 frames of 128 x 128
-power-up.png        256 x 256   PNG with transparency
+01-background.png            3200 x 1100 PNG
+02-track.png                 2560 x 960  PNG
+Running_000.png ... 011.png  consistent PNG source size, transparent
+power-up.png                 256 x 256   PNG with transparency
 ```
 
 ## Current file location

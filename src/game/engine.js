@@ -986,7 +986,7 @@ function drawRacersAndItems(n){
     // shadow
     ctx.fillStyle='rgba(0,0,0,.20)'; var shW=sz.w*0.55; ctx.beginPath();
     ctx.ellipse(sx, layout.shadowY, shW*0.5, Math.max(3,Math.min(p*1.4,m.laneH*0.16)), 0,0,7); ctx.fill();
-    // shield bubble
+    // shield effect
     if(r.shielded){ ctx.strokeStyle='rgba(159,232,255,.9)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(sx,baseline-sz.h*0.5,sz.w*0.45,0,7); ctx.stroke(); }
     var starred=r.starEnd>clockT;
     blitSprite(r.p.charIdx, COLORS[r.p.colorIdx], frame, sx, baseline, scale, starred);
