@@ -182,10 +182,12 @@ function sceneTrackLayout(){
 }
 /* On-screen track geometry — compact pixel-art lanes, generous sky for parallax */
 function trackMetrics(n){
-  if(trackMetricsCache && trackMetricsCacheN===n && trackMetricsCacheScene===sceneIdx) return trackMetricsCache;
   n=Math.max(n,1);
   const S=SCENES[sceneIdx]||{};
   const trackImg=S.trackTexture ? gameAssets.backgroundImages[S.trackTexture] : null;
+  const trackImgW=trackImg ? trackImg.width : 0;
+  const trackImgH=trackImg ? trackImg.height : 0;
+  if(trackMetricsCache && trackMetricsCacheN===n && trackMetricsCacheScene===sceneIdx && trackMetricsCache.trackImgW===trackImgW && trackMetricsCache.trackImgH===trackImgH) return trackMetricsCache;
   const textureRatios=getTrackTextureVerticalRatios(S, trackImg);
   const textureHeightRatio=1+textureRatios.upperRatio+textureRatios.lowerRatio;
   const trackHeightScale=usesProportionalTrackTexture(S) ? sceneTrackHeightScale(S) : 1;
@@ -218,7 +220,9 @@ function trackMetrics(n){
     laneH,
     horizonH,
     skyBottom: trackTop+horizonH,
-    visualLaneCount
+    visualLaneCount,
+    trackImgW,
+    trackImgH
   };
   trackMetricsCacheN=n;
   trackMetricsCacheScene=sceneIdx;
