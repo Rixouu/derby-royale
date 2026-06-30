@@ -1061,7 +1061,7 @@ function viewUnits(){
 /* ============================================================
    COUNTDOWN / RACE FLOW
    ============================================================ */
-let lobbyEl, listEl, addBtn, startBtn, restartBtn, hudEl, hudRows, countWrap, countNum, resultsEl, eventToast, finishFlash, photoTag, orientationPromptEl, orientationPromptBtn;
+let lobbyEl, lobbyHomeEl, lobbyPanelsWrap, lobbyBackBtn, listEl, addBtn, startBtn, restartBtn, hudEl, hudRows, countWrap, countNum, resultsEl, eventToast, finishFlash, photoTag, orientationPromptEl, orientationPromptBtn;
 let lobbyTabBtns=[], lobbyPanels=[];
 let paintSceneSeg=function(){};
 let paintLengthSeg=function(){};
@@ -1127,6 +1127,17 @@ function dismissOrientationPrompt(){
   writeStoredFlag(ORIENTATION_PROMPT_STORAGE_KEY, true);
   syncOrientationPrompt();
 }
+function setLobbyHomeVisible(visible){
+  if(lobbyHomeEl) lobbyHomeEl.classList.toggle('hidden', !visible);
+  if(lobbyPanelsWrap) lobbyPanelsWrap.classList.toggle('hidden', visible);
+}
+function showLobbyHome(){
+  setLobbyHomeVisible(true);
+}
+function openLobbyPanel(tab){
+  showLobbyTab(tab);
+  setLobbyHomeVisible(false);
+}
 function applyStaticTranslations(){
   applyDocumentTranslations();
   const muteBtn=document.getElementById('muteBtn');
@@ -1149,6 +1160,12 @@ function applyStaticTranslations(){
   }
   if(document.getElementById('lobbyEyebrow')) document.getElementById('lobbyEyebrow').textContent=t('lobby.eyebrow');
   if(document.getElementById('lobbyTagline')) document.getElementById('lobbyTagline').innerHTML=t('lobby.taglineHTML');
+  if(document.getElementById('startBtnLabel')) document.getElementById('startBtnLabel').textContent=t('lobby.startGame');
+  if(document.getElementById('menuRacersLabel')) document.getElementById('menuRacersLabel').textContent=t('lobby.tabs.roster');
+  if(document.getElementById('menuSetupLabel')) document.getElementById('menuSetupLabel').textContent=t('lobby.tabs.setup');
+  if(document.getElementById('menuHelpLabel')) document.getElementById('menuHelpLabel').textContent=t('lobby.help.title');
+  if(document.getElementById('menuRulesLabel')) document.getElementById('menuRulesLabel').textContent=t('lobby.rules.title');
+  if(lobbyBackBtn) lobbyBackBtn.textContent=t('controls.back');
   if(lobbyTabs) lobbyTabs.setAttribute('aria-label', t('lobby.sectionsAria'));
   if(document.getElementById('tab-roster')) document.getElementById('tab-roster').textContent=t('lobby.tabs.roster');
   if(document.getElementById('tab-setup')) document.getElementById('tab-setup').textContent=t('lobby.tabs.setup');
@@ -1160,6 +1177,9 @@ function applyStaticTranslations(){
   if(document.getElementById('raceLengthLabel')) document.getElementById('raceLengthLabel').textContent=t('lobby.raceLength');
   if(document.getElementById('powerUpsTitle')) document.getElementById('powerUpsTitle').textContent=t('lobby.powerUpsTitle');
   if(document.getElementById('powerUpsDesc')) document.getElementById('powerUpsDesc').textContent=t('lobby.powerUpsDesc');
+  if(document.getElementById('howToPlayLabel')) document.getElementById('howToPlayLabel').textContent=t('lobby.help.title');
+  if(document.getElementById('howToPlayHint')) document.getElementById('howToPlayHint').textContent=t('lobby.help.hint');
+  if(document.getElementById('howToPlayBody')) document.getElementById('howToPlayBody').innerHTML=t('lobby.help.bodyHTML');
   if(document.getElementById('rulesLabel')) document.getElementById('rulesLabel').textContent=t('lobby.rules.title');
   if(document.getElementById('rulesHint')) document.getElementById('rulesHint').textContent=t('lobby.rules.hint');
   if(document.getElementById('rulesBody')) document.getElementById('rulesBody').innerHTML=t('lobby.rules.bodyHTML');
@@ -1169,7 +1189,6 @@ function applyStaticTranslations(){
     if(!iconClass) return;
     node.innerHTML='<i class="'+iconClass+'"></i> '+escapeHtml(t('powerups.'+powerKey));
   });
-  if(startBtn) startBtn.textContent=t('lobby.startRace');
   if(document.getElementById('lobbyFootnote')) document.getElementById('lobbyFootnote').textContent=t('lobby.footnote');
   if(photoTag) photoTag.textContent=t('results.eyebrow').toUpperCase();
   if(document.getElementById('hudTitle')) document.getElementById('hudTitle').textContent=t('hud.title');
@@ -1451,6 +1470,9 @@ function bindUi(){
   photoTag=document.getElementById('photoTag');
   orientationPromptEl=document.getElementById('orientationPrompt');
   orientationPromptBtn=document.getElementById('orientationPromptBtn');
+  lobbyHomeEl=document.getElementById('lobbyHome');
+  lobbyPanelsWrap=document.getElementById('lobbyPanelsWrap');
+  lobbyBackBtn=document.getElementById('lobbyBackBtn');
   lobbyTabBtns=Array.prototype.slice.call(document.querySelectorAll('.lobby-tab'));
   lobbyPanels=Array.prototype.slice.call(document.querySelectorAll('.lobby-panel'));
   Array.prototype.forEach.call(document.querySelectorAll('#languageSwitch [data-lang]'), function(button){
@@ -1460,13 +1482,21 @@ function bindUi(){
   });
 
   document.getElementById('againBtn').addEventListener('click',function(){ resultsEl.classList.add('hidden'); startRace(); });
-  document.getElementById('editBtn').addEventListener('click',function(){ clearRaceTimers(); resultsEl.classList.add('hidden'); countWrap.classList.add('hidden'); state='lobby'; syncRestartButton(); hudEl.classList.add('hidden'); buildRacers(); renderLobby(); lobbyEl.classList.remove('hidden'); });
+  document.getElementById('editBtn').addEventListener('click',function(){ clearRaceTimers(); resultsEl.classList.add('hidden'); countWrap.classList.add('hidden'); state='lobby'; syncRestartButton(); hudEl.classList.add('hidden'); buildRacers(); renderLobby(); showLobbyHome(); lobbyEl.classList.remove('hidden'); });
   restartBtn.addEventListener('click',function(){ if(state==='lobby')return; startRace(); });
   if(orientationPromptBtn){
     orientationPromptBtn.addEventListener('click', dismissOrientationPrompt);
   }
+  if(lobbyBackBtn){
+    lobbyBackBtn.addEventListener('click', showLobbyHome);
+  }
   lobbyTabBtns.forEach(function(btn){
     btn.addEventListener('click',function(){ showLobbyTab(btn.dataset.tab); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-lobby-target]'), function(button){
+    button.addEventListener('click', function(){
+      openLobbyPanel(button.dataset.lobbyTarget);
+    });
   });
 
   addBtn.addEventListener('click',function(){ if(players.length>=MAX_PLAYERS)return;
@@ -1506,6 +1536,7 @@ function bindUi(){
   startBtn.addEventListener('click',function(){ if(state!=='lobby')return; ac(); players.forEach(function(p,i){ p.name=displayName(p,i); }); startRace(); });
   applyStaticTranslations();
   showLobbyTab('roster');
+  showLobbyHome();
   syncRestartButton();
   syncOrientationPrompt();
 }
@@ -1528,6 +1559,7 @@ function debugReturnToLobby(){
   hudEl.classList.add('hidden');
   buildRacers();
   renderLobby();
+  showLobbyHome();
   lobbyEl.classList.remove('hidden');
 }
 

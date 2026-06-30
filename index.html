@@ -34,62 +34,116 @@
 <button id="restartBtn" class="corner-btn hidden" type="button" title="Restart race" aria-label="Restart race">R</button>
 
 <div id="lobby" class="overlay">
-  <div class="card lobby-card">
-    <div class="lobby-topbar">
-      <div id="languageSwitch" class="lang-switch" role="group" aria-label="Language">
-        <button class="lang-btn active" type="button" data-lang="en" aria-pressed="true">EN</button>
-        <button class="lang-btn" type="button" data-lang="fr" aria-pressed="false">FR</button>
+  <div class="title-screen-shell">
+    <div class="title-screen-content">
+      <div class="title-screen-topbar">
+        <div id="languageSwitch" class="lang-switch" role="group" aria-label="Language">
+          <button class="lang-btn active" type="button" data-lang="en" aria-pressed="true">EN</button>
+          <button class="lang-btn" type="button" data-lang="fr" aria-pressed="false">FR</button>
+        </div>
+      </div>
+
+      <div id="lobbyHome" class="title-screen-home">
+        <div class="title-brand">
+          <div id="lobbyEyebrow" class="eyebrow title-eyebrow">The drinking game</div>
+          <img class="title-logo" src="/elements/game-title.png" alt="Pixel Olympics">
+        </div>
+
+        <div class="title-tagline-plaque" aria-label="Game tagline">
+          <img class="title-tagline-bg" src="/elements/home-bg-description.png" alt="">
+          <div class="title-tagline-copy">
+            <div id="lobbyTagline" class="title-tagline">Build your racers, then cheer them home.<br>First across wins - everyone else drinks.</div>
+          </div>
+        </div>
+
+        <div class="title-menu-board">
+          <button id="startBtn" class="title-action title-action-start" type="button">
+            <img class="title-action-icon" src="/elements/icon-trophy.png" alt="">
+            <span id="startBtnLabel">START GAME</span>
+          </button>
+
+          <div class="title-action-grid">
+            <button class="title-action title-action-racers" type="button" data-lobby-target="roster">
+              <img class="title-action-icon" src="/elements/icon-racers.png" alt="">
+              <span id="menuRacersLabel">Racers</span>
+            </button>
+            <button class="title-action title-action-setup" type="button" data-lobby-target="setup">
+              <img class="title-action-icon" src="/elements/icon-flag.png" alt="">
+              <span id="menuSetupLabel">Race Setup</span>
+            </button>
+            <button class="title-action title-action-help" type="button" data-lobby-target="help">
+              <img class="title-action-icon" src="/elements/icon-book.png" alt="">
+              <span id="menuHelpLabel">How To Play</span>
+            </button>
+            <button class="title-action title-action-rules" type="button" data-lobby-target="rules">
+              <img class="title-action-icon" src="/elements/icon-help.png" alt="">
+              <span id="menuRulesLabel">Rules</span>
+            </button>
+          </div>
+
+          <div id="lobbyFootnote" class="title-footnote">Drink responsibly - water is also a drink 18+</div>
+        </div>
+      </div>
+
+      <div id="lobbyPanelsWrap" class="lobby-panel-shell hidden">
+        <div class="card lobby-card">
+          <div class="lobby-card-toolbar">
+            <button id="lobbyBackBtn" class="lobby-back-btn" type="button">BACK</button>
+          </div>
+
+          <div class="lobby-panels">
+            <section class="lobby-panel active" id="panel-roster" role="tabpanel" data-panel="roster">
+              <div class="section-head">
+                <div id="rosterLabel" class="ctrl-label">Racers</div>
+                <div id="rosterHint" class="hint">Tap the <b>colour</b> to recolour - tap the <b>racer</b> to change</div>
+                <div id="rosterMobileHint" class="mobile-hint">Use the numbered slots below to edit each racer on mobile</div>
+              </div>
+              <div id="playerList"></div>
+              <button id="addBtn" class="btn btn-ghost" type="button">+ ADD PLAYER</button>
+            </section>
+
+            <section class="lobby-panel hidden" id="panel-setup" role="tabpanel" data-panel="setup">
+              <div class="settings">
+                <div class="ctrl"><div id="sceneLabel" class="ctrl-label">Scene</div>
+                  <button id="scenePickerToggle" class="scene-picker-toggle" type="button" aria-expanded="false" aria-label="Choose scene" title="Choose scene"></button>
+                  <div class="seg scene-grid" id="sceneSeg"></div>
+                </div>
+                <div class="ctrl"><div id="raceLengthLabel" class="ctrl-label">Race length</div>
+                  <div class="seg length-grid" id="lengthSeg"></div>
+                </div>
+                <label class="toggle-row"><div><div id="powerUpsTitle" class="tt">Power-ups</div><div id="powerUpsDesc" class="ts">Boosts, bananas, shields &amp; chaos</div></div>
+                  <div class="switch"><input type="checkbox" id="powerToggle" checked><span></span></div></label>
+              </div>
+            </section>
+
+            <section class="lobby-panel hidden" id="panel-help" role="tabpanel" data-panel="help">
+              <div class="section-head">
+                <div id="howToPlayLabel" class="ctrl-label">How To Play</div>
+                <div id="howToPlayHint" class="hint">The rules are simple.</div>
+              </div>
+              <div id="howToPlayBody" class="rules">Pick a racer, choose a colour, name them - then cheer them to the finish.<br><br>
+                <b>Winner</b> hands out sips equal to the number of players. Everyone else drinks their finishing place; <b>last place</b> gets one extra.</div>
+              <div class="pw-legend">
+                <span data-powerup="boost"><i class="pw-boost"></i> Boost - burst of speed</span>
+                <span data-powerup="star"><i class="pw-star"></i> Star - speed + immunity</span>
+                <span data-powerup="banana"><i class="pw-banana"></i> Banana - drop a trap</span>
+                <span data-powerup="lightning"><i class="pw-lightning"></i> Lightning - slow those ahead</span>
+                <span data-powerup="shield"><i class="pw-shield"></i> Shield - block one hit</span>
+              </div>
+            </section>
+
+            <section class="lobby-panel hidden" id="panel-rules" role="tabpanel" data-panel="rules">
+              <div class="section-head">
+                <div id="rulesLabel" class="ctrl-label">Rules</div>
+                <div id="rulesHint" class="hint">Know the game.</div>
+              </div>
+              <div id="rulesBody" class="rules">Keep the basics close when someone needs them.<br><br>
+                <b>Slowpoke clause:</b> never led the race - +1 sip of shame.</div>
+            </section>
+          </div>
+        </div>
       </div>
     </div>
-    <div id="lobbyEyebrow" class="eyebrow">The drinking game</div>
-    <h1>PIXEL OLYMPICS</h1>
-    <div id="lobbyTagline" class="tagline">Build your racers, then cheer them home.<br>First across wins — everyone else drinks.</div>
-    <div class="lobby-tabs" role="tablist" aria-label="Lobby sections">
-      <button class="lobby-tab active" id="tab-roster" type="button" role="tab" aria-selected="true" aria-controls="panel-roster" data-tab="roster">Racers</button>
-      <button class="lobby-tab" id="tab-setup" type="button" role="tab" aria-selected="false" aria-controls="panel-setup" data-tab="setup">Race Setup</button>
-      <button class="lobby-tab" id="tab-rules" type="button" role="tab" aria-selected="false" aria-controls="panel-rules" data-tab="rules">How To Play</button>
-    </div>
-    <div class="lobby-panels">
-      <section class="lobby-panel active" id="panel-roster" role="tabpanel" aria-labelledby="tab-roster" data-panel="roster">
-        <div class="section-head">
-          <div id="rosterLabel" class="ctrl-label">Racers</div>
-          <div id="rosterHint" class="hint">Tap the <b>colour</b> to recolour · tap the <b>racer</b> to change</div>
-          <div id="rosterMobileHint" class="mobile-hint">Use the numbered slots below to edit each racer on mobile</div>
-        </div>
-        <div id="playerList"></div>
-        <button id="addBtn" class="btn btn-ghost" type="button">+ ADD PLAYER</button>
-      </section>
-      <section class="lobby-panel hidden" id="panel-setup" role="tabpanel" aria-labelledby="tab-setup" data-panel="setup">
-        <div class="settings">
-          <div class="ctrl"><div id="sceneLabel" class="ctrl-label">Scene</div>
-            <button id="scenePickerToggle" class="scene-picker-toggle" type="button" aria-expanded="false" aria-label="Choose scene" title="Choose scene"></button>
-            <div class="seg scene-grid" id="sceneSeg"></div>
-          </div>
-          <div class="ctrl"><div id="raceLengthLabel" class="ctrl-label">Race length</div>
-            <div class="seg length-grid" id="lengthSeg"></div>
-          </div>
-          <label class="toggle-row"><div><div id="powerUpsTitle" class="tt">Power-ups</div><div id="powerUpsDesc" class="ts">Boosts, bananas, shields &amp; chaos</div></div>
-            <div class="switch"><input type="checkbox" id="powerToggle" checked><span></span></div></label>
-        </div>
-      </section>
-      <section class="lobby-panel hidden" id="panel-rules" role="tabpanel" aria-labelledby="tab-rules" data-panel="rules">
-        <div class="section-head">
-          <div id="rulesLabel" class="ctrl-label">Rules</div>
-          <div id="rulesHint" class="hint">Keep the basics out of the main setup flow, but close when someone needs them.</div>
-        </div>
-        <div id="rulesBody" class="rules">Pick a racer, choose a colour, name them — then cheer them to the finish.<br><br>
-          <b>Winner</b> hands out sips equal to the number of players. Everyone else drinks their finishing place; <b>last place</b> gets one extra. <b>Slowpoke clause:</b> never led the race → +1 sip of shame.</div>
-        <div class="pw-legend">
-          <span data-powerup="boost"><i class="pw-boost"></i> Boost — burst of speed</span>
-          <span data-powerup="star"><i class="pw-star"></i> Star — speed + immunity</span>
-          <span data-powerup="banana"><i class="pw-banana"></i> Banana — drop a trap</span>
-          <span data-powerup="lightning"><i class="pw-lightning"></i> Lightning — slow those ahead</span>
-          <span data-powerup="shield"><i class="pw-shield"></i> Shield — block one hit</span>
-        </div>
-      </section>
-    </div>
-    <button id="startBtn" class="btn btn-primary btn-start" type="button">START THE RACE</button>
-    <div id="lobbyFootnote" class="footnote">Drink responsibly — water is also a drink 18+</div>
   </div>
 </div>
 
