@@ -333,7 +333,8 @@ function racerLayout(ch, lane, popScale, bob){
   const padTop=Math.max(2, Math.round(laneH*0.04));
   const padBottom=Math.max(3, Math.round(laneH*0.06));
   const fittedScale=Math.min(PXS, Math.max(1, (laneH-padTop-padBottom)/GH));
-  const scale=fittedScale*popScale;
+  const landscapeScaleBoost=isPortraitMobile() ? 1 : 2;
+  const scale=fittedScale*popScale*landscapeScaleBoost;
   const sz=spriteScreenSize(ch,scale);
   const sceneOffset=sceneRacerYOffset();
   const centeredBaseline=lane.center+sz.h*0.5-bob;
@@ -1089,7 +1090,7 @@ function viewUnits(){
 /* ============================================================
    COUNTDOWN / RACE FLOW
    ============================================================ */
-let lobbyEl, lobbyHomeEl, lobbyPanelsWrap, lobbyBackBtn, listEl, addBtn, startBtn, panelStartBtn, helpStartBtn, restartBtn, hudEl, hudRows, countWrap, countNum, resultsEl, eventToast, finishFlash, photoTag, orientationPromptEl, orientationPromptBtn;
+let lobbyEl, lobbyHomeEl, lobbyPanelsWrap, lobbyCardEl, lobbyBackBtn, listEl, addBtn, startBtn, panelStartBtns, helpStartBtn, restartBtn, hudEl, hudRows, countWrap, countNum, resultsEl, eventToast, finishFlash, photoTag, orientationPromptEl, orientationPromptBtn;
 let lobbyTabBtns=[], lobbyPanels=[];
 let paintSceneSeg=function(){};
 let paintLengthSeg=function(){};
@@ -1218,7 +1219,9 @@ function applyStaticTranslations(){
   if(document.getElementById('rulesLabel')) document.getElementById('rulesLabel').textContent=t('lobby.rules.title');
   if(document.getElementById('rulesHint')) document.getElementById('rulesHint').textContent=t('lobby.rules.hint');
   if(document.getElementById('rulesBody')) document.getElementById('rulesBody').innerHTML=t('lobby.rules.bodyHTML');
-  if(panelStartBtn) panelStartBtn.textContent=t('lobby.startRace');
+  Array.prototype.forEach.call(panelStartBtns||[], function(button){
+    button.textContent=t('lobby.startRace');
+  });
   Array.prototype.forEach.call(document.querySelectorAll('[data-powerup]'), function(node){
     const powerKey=node.getAttribute('data-powerup');
     const iconClass=powerupLabels[powerKey];
@@ -1262,6 +1265,12 @@ function showLobbyTab(tab){
     panel.classList.toggle('hidden', !active);
     panel.classList.toggle('active', active);
   });
+  if(lobbyCardEl){
+    lobbyCardEl.classList.toggle('roster-wide', tab==='roster');
+    lobbyCardEl.classList.toggle('setup-wide', tab==='setup');
+    lobbyCardEl.classList.toggle('help-wide', tab==='help');
+    lobbyCardEl.classList.toggle('rules-wide', tab==='rules');
+  }
 }
 function clearRaceTimers(){
   clearTimeout(countdownTimer); countdownTimer=0;
@@ -1429,20 +1438,23 @@ function makePlayerEditor(p,i,mode){
   return row;
 }
 function renderLobby(){ listEl.innerHTML='';
-  if(isCompactLobby()){
+  const rosterWide=!isCompactLobby() && !!document.querySelector('.lobby-card.roster-wide') && !!document.getElementById('panel-roster') && !document.getElementById('panel-roster').classList.contains('hidden');
+  if(isCompactLobby() || rosterWide){
     setMobileRosterIdx(mobileRosterIdx);
-    const counter=document.createElement('div');
-    counter.className='player-mobile-count';
-    counter.textContent=t('lobby.rosterSelected',{ count: players.length, max: MAX_PLAYERS });
-    listEl.appendChild(counter);
+    if(!rosterWide){
+      const counter=document.createElement('div');
+      counter.className='player-mobile-count';
+      counter.textContent=t('lobby.rosterSelected',{ count: players.length, max: MAX_PLAYERS });
+      listEl.appendChild(counter);
+    }
 
     const cards=document.createElement('div');
-    cards.className='player-mobile-card-list';
+    cards.className='player-mobile-card-list'+(rosterWide?' player-mobile-card-list-landscape':'');
     for(let i=0;i<MAX_PLAYERS;i+=1){
       if(i<players.length){
         const p=players[i];
         const card=document.createElement('div');
-        card.className='player-mobile-card'+(i===mobileRosterIdx?' active':'');
+        card.className='player-mobile-card'+(i===mobileRosterIdx?' active':'')+(rosterWide?' player-mobile-card-landscape':'');
         card.style.setProperty('--racer-card', COLORS[p.colorIdx]);
         card.title=displayName(p,i);
         card.addEventListener('click',function(){ mobileRosterIdx=i; renderLobby(); });
@@ -1504,10 +1516,21 @@ function renderLobby(){ listEl.innerHTML='';
         copy.appendChild(label);
         copy.appendChild(input);
 
-        const status=document.createElement('div');
-        status.className='player-mobile-card-status';
-        status.setAttribute('aria-hidden','true');
-        status.textContent='✓';
+        const status=document.createElement(players.length>2 ? 'button' : 'div');
+        status.className='player-mobile-card-status'+(players.length>2 ? ' player-mobile-card-remove' : ' player-mobile-card-status-locked');
+        if(players.length>2){
+          status.type='button';
+          status.title=t('player.removeTitle');
+          status.setAttribute('aria-label', t('player.removeTitle'));
+          status.textContent='X';
+          status.addEventListener('click',function(e){
+            e.stopPropagation();
+            removePlayerAt(i);
+          });
+        } else {
+          status.setAttribute('aria-hidden','true');
+          status.textContent='✓';
+        }
 
         card.appendChild(artWrap);
         card.appendChild(copy);
@@ -1516,7 +1539,7 @@ function renderLobby(){ listEl.innerHTML='';
       } else {
         const slot=document.createElement('button');
         slot.type='button';
-        slot.className='player-mobile-slot player-mobile-slot-empty';
+        slot.className='player-mobile-slot player-mobile-slot-empty'+(rosterWide?' player-mobile-slot-landscape':'');
         slot.innerHTML='<span class="player-mobile-slot-plus">+</span><span class="player-mobile-slot-label">'+escapeHtml(t('lobby.addRacer'))+'</span>';
         slot.title=t('lobby.addPlayer',{ count: players.length, max: MAX_PLAYERS });
         slot.disabled=players.length>=MAX_PLAYERS;
@@ -1597,7 +1620,7 @@ function bindUi(){
   listEl=document.getElementById('playerList');
   addBtn=document.getElementById('addBtn');
   startBtn=document.getElementById('startBtn');
-  panelStartBtn=document.getElementById('panelStartBtn');
+  panelStartBtns=document.querySelectorAll('.panel-start-btn');
   helpStartBtn=document.getElementById('helpStartBtn');
   restartBtn=document.getElementById('restartBtn');
   hudEl=document.getElementById('hud');
@@ -1612,6 +1635,7 @@ function bindUi(){
   orientationPromptBtn=document.getElementById('orientationPromptBtn');
   lobbyHomeEl=document.getElementById('lobbyHome');
   lobbyPanelsWrap=document.getElementById('lobbyPanelsWrap');
+  lobbyCardEl=document.querySelector('.lobby-card');
   lobbyBackBtn=document.getElementById('lobbyBackBtn');
   lobbyTabBtns=Array.prototype.slice.call(document.querySelectorAll('.lobby-tab'));
   lobbyPanels=Array.prototype.slice.call(document.querySelectorAll('.lobby-panel'));
@@ -1680,7 +1704,9 @@ function bindUi(){
     startRace();
   }
   startBtn.addEventListener('click',startRaceFromLobby);
-  if(panelStartBtn) panelStartBtn.addEventListener('click',startRaceFromLobby);
+  Array.prototype.forEach.call(panelStartBtns||[], function(button){
+    button.addEventListener('click',startRaceFromLobby);
+  });
   if(helpStartBtn) helpStartBtn.addEventListener('click',startRaceFromLobby);
   applyStaticTranslations();
   showLobbyTab('roster');

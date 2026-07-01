@@ -105,6 +105,7 @@
               <div class="panel-frame panel-frame-roster">
                 <div id="playerList"></div>
                 <button id="addBtn" class="btn btn-ghost" type="button">+ ADD PLAYER</button>
+                <button id="rosterStartBtn" class="btn btn-primary btn-start panel-start-btn roster-start-btn" type="button">START THE RACE</button>
               </div>
             </section>
 
@@ -118,24 +119,28 @@
                 <div id="setupHint" class="panel-hero-subtitle">Build your challenge</div>
               </div>
               <div class="panel-frame panel-frame-setup">
-                <div class="settings">
-                  <div class="ctrl ctrl-scene">
+                <div class="settings setup-layout">
+                  <div class="ctrl ctrl-scene setup-scene-column">
                     <div id="sceneLabel" class="ctrl-label">Scene</div>
                     <button id="scenePickerToggle" class="scene-picker-toggle" type="button" aria-expanded="false" aria-label="Choose scene" title="Choose scene"></button>
                     <div class="seg scene-grid" id="sceneSeg"></div>
                   </div>
-                  <div class="ctrl ctrl-length">
-                    <div id="raceLengthLabel" class="ctrl-label">Race length</div>
-                    <div class="seg length-grid" id="lengthSeg"></div>
-                  </div>
-                  <label class="toggle-row">
-                    <div>
-                      <div id="powerUpsTitle" class="tt">Power-ups</div>
-                      <div id="powerUpsDesc" class="ts">Boosts, bananas, shields &amp; chaos</div>
+                  <div class="setup-side-column">
+                    <div class="ctrl ctrl-length setup-length-column">
+                      <div id="raceLengthLabel" class="ctrl-label">Race length</div>
+                      <div class="seg length-grid" id="lengthSeg"></div>
                     </div>
-                    <div class="switch"><input type="checkbox" id="powerToggle" checked><span></span></div>
-                  </label>
-                  <div id="setupPowerupsLegend" class="rules-powerups setup-powerups"></div>
+                    <div class="setup-power-column">
+                      <label class="toggle-row">
+                        <div>
+                          <div id="powerUpsTitle" class="tt">Power-ups</div>
+                          <div id="powerUpsDesc" class="ts">Boosts, bananas, shields &amp; chaos</div>
+                        </div>
+                        <div class="switch"><input type="checkbox" id="powerToggle" checked><span></span></div>
+                      </label>
+                      <div id="setupPowerupsLegend" class="rules-powerups setup-powerups"></div>
+                    </div>
+                  </div>
                 </div>
                 <button id="panelStartBtn" class="btn btn-primary btn-start panel-start-btn" type="button">START THE RACE</button>
                 <div id="setupFootnote" class="panel-footnote">Drink responsibly - water is also a drink 18+</div>
